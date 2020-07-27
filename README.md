@@ -2,8 +2,8 @@
 
 ## Running it locally
 
-This repo depends on two other repos. They should all be placed in the same
-directory and served locally:
+The modules in this repo depend on modules in two other repos. They should all
+be placed in the same directory to serve locally:
 
 ```
 git clone git@github.com:stephband/fn.git
