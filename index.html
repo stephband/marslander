@@ -1,3 +1,4 @@
+
 <style>
 html, body {
     overflow: hidden;
@@ -7,6 +8,38 @@ html, body {
     padding: 0;
     background-color: black;
 }
+
+body {
+    display: grid;
+    align-content: center;
+    align-items: center;
+    justify-content: center;
+    justify-items: center;
+    grid-template-columns: 100%;
+}
+
+body > canvas {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+}
+
+body > #game-message {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0.2vh auto auto auto;
+    position: relative;
+    z-index: 2;
+}
+
+body > #game-stats {
+    grid-column: 1;
+    grid-row: 1;
+    margin: auto auto 0.1vh auto;
+    position: relative;
+    z-index: 2;
+}
+
 #game-canvas {
     --rocket-fill: #030444;
     --fuel-fill:   #030444;
@@ -20,9 +53,44 @@ html, body {
     height: auto;
     background: linear-gradient(to bottom, rgb(211, 184, 159), rgb(240, 219, 200));
 }
+
+#game-message {
+    transition: opacity 1s linear;
+    opacity: 0;
+}
+
+#game-message.visible {
+    opacity: 1;
+}
+
+#game-message p {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 3.2vw;
+    text-align: center;
+    color: #541d10;
+}
+
+#game-stats {
+    transition: opacity 1s linear;
+    opacity: 0;
+}
+
+#game-stats.visible {
+    opacity: 1;
+}
+
+#game-stats pre {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1vw;
+    text-align: left;
+    color: #ffffff;
+}
 </style>
 
 <canvas id="game-canvas"></canvas>
+
+<div id="game-message" hidden></div>
+<div id="game-stats" hidden></div>
 
 <script type="module">
     import './module.js';

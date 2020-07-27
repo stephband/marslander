@@ -14,6 +14,13 @@ export function renderRocket(ctx, viewbox, style, rocket) {
     ctx.fillStyle = style.getPropertyValue('--rocket-fill');
     ctx.fill();
     ctx.restore();
+
+    // ----------------
+    if (rocket.shape1) {
+        drawPath(ctx, rocket.shape1);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+    }
 }
 
 

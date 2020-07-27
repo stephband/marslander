@@ -1,8 +1,8 @@
 
-import { overload } from '../../fn/module.js';
+import { id, overload } from '../../fn/module.js';
 
 export const updateValue = overload((data) => typeof data.value, {
-    'number': function(data, duration) {
+    'number': function(data, duration, fn = id) {
         if (data.acceleration) {
             data.velocity += data.acceleration * duration;
         }
@@ -12,13 +12,13 @@ export const updateValue = overload((data) => typeof data.value, {
                 data.velocity -= data.velocity * data.drag;
             }
 
-            data.value += data.velocity * duration;
+            data.value = fn(data.value + data.velocity * duration);
         }
 
         return data;
     },
 
-    'object': function(data, duration) {
+    'object': function(data, duration, fn = id) {
         if (data.acceleration) {
             let n = -1;
             while(++n in data.value) {
