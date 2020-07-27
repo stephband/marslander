@@ -113,6 +113,7 @@ export function detectLine(ls, le, p0, p1) {
     };
 }
 
+/*
 export function detectMovingLine(ls0, le0, ls1, le1, p0, p1) {
     const xs0 = ls0[0];
     const ys0 = ls0[1];
@@ -206,3 +207,4 @@ export function detectMovingLine(ls0, le0, ls1, le1, p0, p1) {
 
     return t;
 }
+*/
