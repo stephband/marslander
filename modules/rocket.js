@@ -16,11 +16,11 @@ export function renderRocket(ctx, viewbox, style, rocket) {
     ctx.restore();
 
     // ----------------
-    if (rocket.shape1) {
+    /*if (rocket.shape1) {
         drawPath(ctx, rocket.shape1);
         ctx.fillStyle = 'red';
         ctx.fill();
-    }
+    }*/
 }
 
 

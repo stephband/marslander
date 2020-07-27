@@ -106,7 +106,8 @@ function detectObjectTerrainCollision(terrain, rocket, p0, r0) {
         .map(toCartesian)
         .map((p) => add(rocket.position.value, p));
 
-    rocket.shape1 = shape1;
+    // For quick check rendering
+    //rocket.shape1 = shape1;
 
     let n = shape0.length;
     let t = Infinity;
