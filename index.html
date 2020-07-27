@@ -1,0 +1,29 @@
+<style>
+html, body {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: black;
+}
+#game-canvas {
+    --rocket-fill: #030444;
+    --fuel-fill:   #030444;
+    --terrain-fill:#995522;
+    --vapour-fill: #ffffff;
+    --sky-fill-top: #201a15;
+    --sky-fill-bottom: #f0dbc8;
+    --explosion-fill: #ff6118bb;
+
+    width: 100%;
+    height: auto;
+    background: linear-gradient(to bottom, rgb(211, 184, 159), rgb(240, 219, 200));
+}
+</style>
+
+<canvas id="game-canvas"></canvas>
+
+<script type="module">
+    import './module.js';
+</script>
