@@ -33,6 +33,10 @@ export function add(n, vector) {
     };
 }
 
-export function gradient(vector) {
-    return vector[1] / vector[0];
+export function gradient(v0, v1) {
+    return (v1[1] - v0[1]) / (v1[0] - v0[0]);
+}
+
+export function equal(v0, v1) {
+    return v0[0] === v1[0] && v0[1] === v1[1];
 }

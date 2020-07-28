@@ -10,7 +10,7 @@ import { renderBackground } from './modules/background.js';
 import { renderGrid } from './modules/grid.js';
 import { updateVapour, renderVapour } from './modules/vapour.js';
 import { updateExplosion, renderExplosion } from './modules/explosion.js';
-import { detectLine } from './modules/collision.js';
+import { detectLinePoint } from './modules/collision.js';
 import { message, stats } from './modules/message.js';
 
 const random = Math.random;
@@ -78,11 +78,12 @@ function detectTerrainCollision(terrain, p0, p1) {
     while(n--) {
         const ls = points[n];
         const le = points[n + 1];
-        const c = detectLine(ls, le, p0, p1);
+        const c = detectLinePoint(ls, le, ls, le, p0, p1);
 
         if (c && c.time < t) {
             collision = c;
             collision.body = terrain;
+            collision.line = [ls, le];
         }
     }
 
@@ -198,10 +199,9 @@ const updateObject = overload((viewbox, object) => object.type, {
                 collision.velocity = copy(rocket.position.velocity);
 
                 // If velocity is high, or if the craft is not upright or the ground is not level
-                const ls = collision.surface[0];
-                const le = collision.surface[1];
-                const l = subtract(ls, le);
-                const g = abs(gradient(l));
+                const ls = collision.line[0];
+                const le = collision.line[1];
+                const g = abs(gradient(ls, le));
                 const vel = toPolar(collision.velocity)[0];
 
                 if (toPolar(collision.velocity)[0] > maxTouchdownVelocity) {
