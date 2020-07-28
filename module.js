@@ -78,7 +78,7 @@ function detectTerrainCollision(terrain, p0, p1) {
     while(n--) {
         const ls = points[n];
         const le = points[n + 1];
-        const c = detectLinePoint(ls, le, ls, le, p0, p1);
+        const c  = detectLinePoint(ls, le, ls, le, p0, p1);
 
         if (c && c.time < t) {
             collision = c;
@@ -125,7 +125,6 @@ function detectObjectTerrainCollision(terrain, rocket, p0, r0) {
     return collision;
 }
 
-
 const updateObject = overload((viewbox, object) => object.type, {
     'rocket': function(terrainbox, rocket, t0, t1, objects, terrain, collisions) {
         const p0 = copy(rocket.position.value);
@@ -159,22 +158,22 @@ const updateObject = overload((viewbox, object) => object.type, {
                     duration: 1 + random() * 0.8,
 
                     position: {
-                        value: [
+                        value: Float64Array.of(
                             rocket.position.value[0] + rotation[0],
                             rocket.position.value[1] - rotation[1]
-                        ],
+                        ),
 
-                        velocity: [
+                        velocity: Float64Array.of(
                             rocket.position.velocity[0] + (-0.8 - random() * 0.6) * rocket.position.acceleration[0],
                             rocket.position.velocity[1] + (-0.8 - random() * 0.6) * rocket.position.acceleration[1]
-                        ],
+                        ),
 
                         drag: 0.05,
 
-                        acceleration: [
+                        acceleration: Float64Array.of(
                             0,
                             gravity / 3
-                        ]
+                        )
                     },
 
                     data: [0, 0, 3]
@@ -203,6 +202,8 @@ const updateObject = overload((viewbox, object) => object.type, {
                 const le = collision.line[1];
                 const g = abs(gradient(ls, le));
                 const vel = toPolar(collision.velocity)[0];
+
+                console.log('Collision', collision, p0, rocket.position.value);
 
                 if (toPolar(collision.velocity)[0] > maxTouchdownVelocity) {
                     remove(objects, rocket);
@@ -494,7 +495,6 @@ function start() {
         default: noop
     }));
 }
-
 
 
 start();

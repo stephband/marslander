@@ -6,38 +6,66 @@ const min = Math.min;
 const max = Math.max;
 
 function isPointInLine(s, e, p) {
-    // If point is outside line bounds
-    if (p[0] < min(s[0], e[0]) || p[1] > max(s[1], e[1])) {
-        return false;
-    }
+    const g = gradient(s, e);
 
-    // Return true where p is the same gradient freom s as e is
-    // Todo: do we need to account for floating point errors?
-    return gradient(s, p) === gradient(s, e);
+    // Return true where point is inside line bounds and p is
+    // the same gradient from s as e is...
+    return ((g > -1 && g < 1) ?
+        p[0] >= min(s[0], e[0]) && p[0] <= max(s[0], e[0]) :
+        p[1] >= min(s[1], e[1]) && p[1] <= max(s[1], e[1]))
+    && g === gradient(s, p) ;
 }
 
-export function detectXLine(ls, le, p0, p1) {
-    if (ls[0] !== le[0]) {
-        throw new Error('Line is not vertical (' + ls + ' to ' + le + ')');
+function timeAtIntersect(ys, ye, yp0, yp1) {
+    // Is it starting off intersecting?
+    if (yp0 > min(ys, ye) && yp0 < max(ys, ye)) {
+        return 0;
     }
 
-    const xs  = ls[0];
-    const ys  = ls[1];
-    const ye  = le[1];
-    const xp0 = p0[0];
-    const yp0 = p0[1];
-    const xp1 = p1[0];
-    const yp1 = p1[1];
+    // Check if it hits the start or the end of the line
+    // yp1 = yp0 should have alrready been checked in a parent fn
+    const ts = (ys - yp0) / (yp1 - yp0);
+    const te = (ye - yp0) / (yp1 - yp0);
 
-    // Where xp0 is the same as line start, collision is immediate
-    const t = (xs - xp0) / (xp1 - xp0);
+    // t is the min of ts and te within 0 - 1
+    return ts >= 0 && ts < 1 ?
+        te >= 0 && te < 1 ?
+            min(ts, te) :
+            ts :
+        te >= 0 && te < 1 ?
+            te :
+            undefined ;
+}
+
+function detectXLine(x, ys, ye, xp0, yp0, xp1, yp1) {
+    // Is it moving vertically?
+    if (xp0 === xp1) {
+        // Is it parallel with x?
+        if (x !== xp0) { return; }
+
+        // So when does it hit the line in the y axis ?
+        const t = timeAtIntersect(ys, ye, yp0, yp1);
+
+        // No intersect?
+        if (t === undefined) { return; }
+
+        return {
+            //fn: detectXLine,
+            //args: arguments,
+            time:  t,
+            point: Float64Array.of(x, t * (yp1 - yp0) + yp0)
+        };
+    }
+
+    // It has at least some horizontal movement
+    const t = (x - xp0) / (xp1 - xp0) ;
 
     // Intersect outside time window?
     if (t < 0 || t >= 1) {
         return;
     }
 
-    const xpt = xs;
+    const xpt = x;
     const ypt = t * (yp1 - yp0) + yp0;
 
     // Intersect outside line ends?
@@ -46,25 +74,35 @@ export function detectXLine(ls, le, p0, p1) {
     }
 
     return {
+        //fn: detectXLine,
+        //args: arguments,
         time: t,
-        point: [xpt, ypt]
+        point: Float64Array.of(xpt, ypt)
     };
 }
 
-export function detectYLine(ls, le, p0, p1) {
-    if (ls[1] !== le[1]) {
-        throw new Error('Line is not horizontal (' + ls + ' to ' + le + ')');
+function detectYLine(y, xs, xe, xp0, yp0, xp1, yp1) {
+    // Is it moving horizontally?
+    if (yp0 === yp1) {
+        // Is it parallel with y?
+        if (y !== yp0) { return; }
+
+        // So when does it hit the line in the y axis ?
+        const t = timeAtIntersect(xs, xe, xp0, xp1);
+
+        // No intersect?
+        if (t === undefined) { return; }
+
+        return {
+            //fn: detectYLine,
+            //args: arguments,
+            time: t,
+            point: Float64Array.of(t * (xp1 - xp0) + xp0, y)
+        };
     }
 
-    const ys  = ls[1];
-    const xs  = ls[0];
-    const xe  = le[0];
-    const xp0 = p0[0];
-    const yp0 = p0[1];
-    const xp1 = p1[0];
-    const yp1 = p1[1];
-
-    const t = (ys - yp0) / (yp1 - yp0);
+    // It has at least some vertical movement
+    const t = (y - yp0) / (yp1 - yp0) ;
 
     // Intersect outside time window?
     if (t < 0 || t >= 1) {
@@ -78,41 +116,18 @@ export function detectYLine(ls, le, p0, p1) {
         return;
     }
 
-    const ypt = ys;
+    const ypt = y;
 
     return {
+        //fn: detectYLine,
+        //args: arguments,
         time: t,
-        point: [xpt, ypt]
+        point: Float64Array.of(xpt, ypt)
     };
 }
 
-export function detectStaticLineMovingPoint(ls, le, p0, p1) {
-    if (ls[0] === le[0]) {
-        if (ls[1] === le[1]) {
-            throw new Error('Line has no dimension (' + ls + ' to ' + le + ')');
-        }
-
-        // Line is a vertical
-        return detectXLine(ls, le, p0, p1);
-    }
-
-    if (ls[1] === le[1]) {
-        // Line is a horizontal
-        return detectYLine(ls, le, p0, p1);
-    }
-
-    const xs = ls[0];
-    const ys = ls[1];
-    const xe = le[0];
-    const ye = le[1];
-
+function detectLine(xs, ys, xe, ye, xp0, yp0, xp1, yp1) {
     const g = (ye - ys) / (xe - xs);
-
-    const xp0 = p0[0];
-    const yp0 = p0[1];
-    const xp1 = p1[0];
-    const yp1 = p1[1];
-
     const t = (ys - yp0 + g * (xp0 - xs)) / (yp1 - yp0 + g * (xp0 - xp1));
 
     // Intersect outside time window?
@@ -121,18 +136,41 @@ export function detectStaticLineMovingPoint(ls, le, p0, p1) {
     }
 
     const xpt = t * (xp1 - xp0) + xp0;
+    const ypt = t * (yp1 - yp0) + yp0;
 
     // Intersect outside line ends?
-    if (xpt < min(xs, xe) || xpt > max(xs, xe)) {
+    if((g > -1 && g < 1) ?
+        (xpt < min(xs, xe) || xpt > max(xs, xe)) :
+        (ypt < min(ys, ye) || ypt > max(ys, ye))) {
         return;
     }
 
-    const ypt = t * (yp1 - yp0) + yp0;
-
     return {
-        point: [xpt, ypt],
-        time: t
+        //fn:    detectLine,
+        //args:  arguments,
+        time:  t,
+        point: Float64Array.of(xpt, ypt)
     };
+}
+
+export function detectStaticLineMovingPoint(ls, le, p0, p1) {
+    const xs = ls[0];
+    const ys = ls[1];
+    const xe = le[0];
+    const ye = le[1];
+    const xp0 = p0[0];
+    const yp0 = p0[1];
+    const xp1 = p1[0];
+    const yp1 = p1[1];
+
+    return xs === xe ?
+        // Vertical
+        detectXLine(xs, ys, ye, xp0, yp0, xp1, yp1) :
+    ys === ye ?
+        // Horizontal
+        detectYLine(ys, xs, xe, xp0, yp0, xp1, yp1) :
+        // Arbitrary
+        detectLine(xs, ys, xe, ye, xp0, yp0, xp1, yp1) ;
 }
 
 export function detectMovingLineMovingPoint(s0, e0, s1, e1, p0, p1) {
@@ -173,8 +211,14 @@ export function detectMovingLineMovingPoint(s0, e0, s1, e1, p0, p1) {
         // the start or the end, not whether it is currently in between the
         // start and end... todo...
         if (b === 0) {
+            if (isPointInLine(s0, e0, p0)) {
+                return {
+                    time: 0,
+                    point: p0
+                };
+            }
+
             throw new Error('Fix this');
-            return;
         }
         else {
             t = -c / b;
@@ -209,8 +253,10 @@ export function detectMovingLineMovingPoint(s0, e0, s1, e1, p0, p1) {
     }
 
     return {
+        //fn: detectMovingLineMovingPoint,
+        //args: arguments,
         time: t,
-        point: [xpt, ypt]
+        point: Float64Array.of(xpt, ypt),
     };
 }
 
@@ -225,7 +271,8 @@ export function detectLinePoint(s0, e0, s1, e1, p0, p1) {
                 equal(s0, p0) ? { time: 0, point: p0 } :
                 undefined :
             // Is point in line?
-            isPointInLine(s0, e0, p0) ? { time: 0, point: p0 } :
+            isPointInLine(s0, e0, p0) ?
+                { time: 0, point: p0 } :
             undefined :
         // Does moving point cross static line?
         detectStaticLineMovingPoint(s0, e0, p0, p1) :
@@ -235,6 +282,7 @@ export function detectLinePoint(s0, e0, s1, e1, p0, p1) {
 
 
 window.d = detectLinePoint;
+
 
 console.log('Vertical static line');
 console.log(0.5,   detectLinePoint([1,0],[1,2],[1,0],[1,2],[0,1],[2,1]), 'Horizontal motion point');
@@ -259,18 +307,18 @@ console.log('und', detectLinePoint([0,1],[2,1],[0,1],[2,1],[3,1],[3,1]), 'Motion
 console.log('Vertical travelling line');
 //console.log('und', detectLinePoint([0,0],[0,2],[2,0],[2,2],[0,1],[2,1]));
 console.log(0.5,   detectLinePoint([0,0],[0,2],[2,0],[2,2],[1,0],[1,2]));
-console.log(0.5,   detectLinePoint([0,0],[0,2],[2,0],[2,2],[2,1],[2,1]), 'Motionless point');
+console.log(0.5,   detectLinePoint([0,0],[0,2],[2,0],[2,2],[1,1],[1,1]), 'Motionless point');
 console.log(0.5,   detectLinePoint([0,0],[0,2],[2,0],[2,2],[2,1],[0,1]));
 console.log(0.5,   detectLinePoint([0,0],[0,2],[2,0],[2,2],[1,2],[1,0]));
-console.log(0.5,   detectLinePoint([0,0],[0,2],[2,0],[2,2],[2,1],[2,1]), 'Motionless point');
+console.log(0.5,   detectLinePoint([0,0],[0,2],[2,0],[2,2],[1,1],[1,1]), 'Motionless point');
 
 console.log('Horizontal travelling line');
 console.log(0.5,   detectLinePoint([0,0],[2,0],[0,2],[2,2],[0,1],[2,1]));
 //console.log('und', detectLinePoint([0,0],[2,0],[0,2],[2,2],[1,0],[1,2]));
-console.log(0.5,   detectLinePoint([0,0],[2,0],[0,2],[2,2],[2,1],[2,1]), 'Motionless point');
+console.log(0.5,   detectLinePoint([0,0],[2,0],[0,2],[2,2],[1,1],[1,1]), 'Motionless point');
 console.log(0.5,   detectLinePoint([0,0],[2,0],[0,2],[2,2],[2,1],[0,1]));
 console.log(0.5,   detectLinePoint([0,0],[2,0],[0,2],[2,2],[1,2],[1,0]));
-console.log(0.5,   detectLinePoint([0,0],[2,0],[0,2],[2,2],[2,1],[2,1]), 'Motionless point');
+console.log(0.5,   detectLinePoint([0,0],[2,0],[0,2],[2,2],[1,1],[1,1]), 'Motionless point');
 
 console.log('/ to \\ travelling line');
 console.log(0.5,   detectLinePoint([0,0],[2,2],[0,2],[2,0],[0,1],[2,1]));
