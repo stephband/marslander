@@ -16,7 +16,7 @@ function isPointInLine(s, e, p) {
     && g === gradient(s, p) ;
 }
 
-function timeAtIntersect(ys, ye, yp0, yp1) {
+function timeAtOverlap(ys, ye, yp0, yp1) {
     // Is it starting off intersecting?
     if (yp0 > min(ys, ye) && yp0 < max(ys, ye)) {
         return 0;
@@ -37,10 +37,8 @@ function timeAtIntersect(ys, ye, yp0, yp1) {
             undefined ;
 }
 
-function detectLineOverlap(xs, ys, xe, ye, xp0, yp0, xp1, yp1, g) {
-    const t = (g > -1 && g < 1) ?
-        timeAtIntersect(xs, xe, xp0, xp1) :
-        timeAtIntersect(ys, ye, yp0, yp1) ;
+function detectMovingLineOverlap(xs, ys, xe, ye, xp0, xp1) {
+    throw new Error('Needs algebra');
 
     // No intersect?
     if (t === undefined) { return; }
@@ -48,7 +46,23 @@ function detectLineOverlap(xs, ys, xe, ye, xp0, yp0, xp1, yp1, g) {
     return {
         //fn: detectLineOverlap,
         //args: arguments,
-        time: t,
+        t: t,
+        point: Float64Array.of(t * (xp1 - xp0) + xp0, t * (yp1 - yp0) + yp0)
+    };
+}
+
+function detectLineOverlap(xs, ys, xe, ye, xp0, yp0, xp1, yp1, g) {
+    const t = (g > -1 && g < 1) ?
+        timeAtOverlap(xs, xe, xp0, xp1) :
+        timeAtOverlap(ys, ye, yp0, yp1) ;
+
+    // No intersect?
+    if (t === undefined) { return; }
+
+    return {
+        //fn: detectLineOverlap,
+        //args: arguments,
+        t: t,
         point: Float64Array.of(t * (xp1 - xp0) + xp0, t * (yp1 - yp0) + yp0)
     };
 }
@@ -69,7 +83,7 @@ function detectXLine(x, ys, ye, xp0, yp0, xp1, yp1) {
     return (ypt >= min(ys, ye) && ypt <= max(ys, ye)) ? {
             //fn: detectXLine,
             //args: arguments,
-            time: t,
+            t: t,
             point: Float64Array.of(xpt, ypt)
         } :
     undefined ;
@@ -91,7 +105,7 @@ function detectYLine(y, xs, xe, xp0, yp0, xp1, yp1) {
     return (xpt >= min(xs, xe) && xpt <= max(xs, xe)) ? {
             //fn: detectXLine,
             //args: arguments,
-            time: t,
+            t: t,
             point: Float64Array.of(xpt, ypt)
         } :
     undefined ;
@@ -118,7 +132,7 @@ function detectLine(xs, ys, xe, ye, xp0, yp0, xp1, yp1, g) {
     return {
         //fn:    detectLine,
         //args:  arguments,
-        time:  t,
+        t:  t,
         point: Float64Array.of(xpt, ypt)
     };
 }
@@ -178,26 +192,28 @@ export function detectMovingLineMovingPoint(s0, e0, s1, e1, p0, p1) {
     const b = ya * xes + xb * yps - xa * yes - yb * xps;
     const c = yps * xes - xps * yes;
 
+    //console.log('detectMovingLineMovingPoint', a, b, c);
+
     let t;
 
     // If a is 0 this is not a quadratic, it's just t = -c / b
     if (a === 0) {
         // If b is also 0 we have a problem. I think this means that p
-        // is travelling with the line. And I think we can only know if it hits
-        // the start or the end, not whether it is currently in between the
-        // start and end... todo...
+        // is travelling parallel to the line.
         if (b === 0) {
-            if (isPointInLine(s0, e0, p0)) {
-                return {
-                    time: 0,
-                    point: p0
-                };
+            // And I think that if c is 0 it is on the line
+            if (c === 0) {
+                return detectMovingLineOverlap(xs, ys, xe, ye, xp0, xp1);
             }
 
-            throw new Error('Fix this');
+            undefined;
+            //throw new Error('Fix this');
         }
         else {
-            t = -c / b;
+            const ta = -c / b;
+            t = ta >= 0 && ta < 1 ?
+                ta :
+                undefined;
         }
     }
     else {
@@ -231,8 +247,10 @@ export function detectMovingLineMovingPoint(s0, e0, s1, e1, p0, p1) {
     return {
         //fn: detectMovingLineMovingPoint,
         //args: arguments,
-        time: t,
+        t: t,
         point: Float64Array.of(xpt, ypt),
+        st: Float64Array.of(xst, yst),
+        et: Float64Array.of(xet, yet)
     };
 }
 
@@ -244,11 +262,11 @@ export function detectLinePoint(s0, e0, s1, e1, p0, p1) {
             // Is line a single point?
             equal(s0, e0) ?
                 // Does it coincide with point?
-                equal(s0, p0) ? { time: 0, point: p0 } :
+                equal(s0, p0) ? { t: 0, point: p0 } :
                 undefined :
             // Is point in line?
             isPointInLine(s0, e0, p0) ?
-                { time: 0, point: p0 } :
+                { t: 0, point: p0 } :
             undefined :
         // Does moving point cross static line?
         detectStaticLineMovingPoint(s0, e0, p0, p1) :

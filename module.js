@@ -17,6 +17,8 @@ const random = Math.random;
 const pi = Math.PI;
 const pow = Math.pow;
 const abs = Math.abs;
+const min = Math.min;
+const max = Math.max;
 
 const canvas  = document.getElementById('game-canvas');
 canvas.width  = 1600;
@@ -59,18 +61,7 @@ function updateViewbox(viewbox, rocket, duration) {
 
 const getObjectType = (ctx, viewbox, style, object) => object.type;
 
-function detectTerrainCollision(terrain, p0, p1) {
-    const xmin = Math.min(p0[0], p1[0]);
-    const ymin = Math.min(p0[1], p1[1]);
-
-    // Grab a bit of terrain just larger than point path
-    const points = viewTerrain([
-        xmin,
-        ymin,
-        Math.max(p0[0], p1[0]) - xmin,
-        Math.max(p0[1], p1[1]) - ymin
-    ], terrain.data);
-
+function detectTerrainCollision(points, p0, p1) {
     let n = points.length - 1;
     let t = Infinity;
     let collision;
@@ -80,9 +71,10 @@ function detectTerrainCollision(terrain, p0, p1) {
         const le = points[n + 1];
         const c  = detectLinePoint(ls, le, ls, le, p0, p1);
 
-        if (c && c.time < t) {
+        if (c && c.t < t) {
             collision = c;
-            collision.body = terrain;
+            collision.st = ls;
+            collision.et = le;
             collision.s0 = ls;
             collision.e0 = le;
             collision.s1 = ls;
@@ -95,8 +87,33 @@ function detectTerrainCollision(terrain, p0, p1) {
     return collision;
 }
 
+function detectObjectCollision(shape0, shape1, point) {
+    let n = shape0.length - 1;
+    let t = Infinity;
+    let collision;
+
+    while(n--) {
+        const c = detectLinePoint(shape0[n], shape0[n + 1], shape1[n], shape1[n + 1], point, point);
+
+        if (c && c.t < t) {
+            collision = c;
+            collision.s0 = shape0[n];
+            collision.e0 = shape0[n + 1];
+            collision.s1 = shape1[n];
+            collision.e1 = shape1[n + 1];
+            collision.p0 = point;
+            collision.p1 = point;
+        }
+    }
+
+    return collision;
+}
+
 function detectObjectTerrainCollision(terrain, rocket, p0, r0) {
-    if (equal(rocket.position.value, p0)) {
+    const p1 = rocket.position.value;
+    const r1 = rocket.rotation.value;
+
+    if (equal(p1, p0)) {
         return;
     }
 
@@ -108,22 +125,45 @@ function detectObjectTerrainCollision(terrain, rocket, p0, r0) {
         .map(toCartesian)
         .map((p) => add(p0, p));
     const shape1 = polarData
-        .map((p) => subtract([0, rocket.rotation.value * 2 * pi], p))
+        .map((p) => subtract([0, r1 * 2 * pi], p))
         .map(toCartesian)
-        .map((p) => add(rocket.position.value, p));
+        .map((p) => add(p1, p));
 
-    // For quick check rendering
-    //rocket.shape1 = shape1;
+    const xmin = min(p0[0], p1[0]);
+    const ymin = min(p0[1], p1[1]);
+
+    // Grab a bit of terrain just larger than point path
+    const points = viewTerrain([
+        xmin,
+        ymin,
+        max(p0[0], p1[0]) - xmin,
+        max(p0[1], p1[1]) - ymin
+    ], terrain.data);
 
     let n = shape0.length;
     let t = Infinity;
     let collision;
 
     while (n--) {
-        const c = detectTerrainCollision(terrain, shape0[n], shape1[n]);
-        if (c && c.time < t) {
-            t = c.time;
+        const c = detectTerrainCollision(points, shape0[n], shape1[n]);
+        if (c && c.t < t) {
+            t = c.t;
             collision = c;
+            collision.object1 = terrain;
+            collision.object2 = rocket;
+        }
+    }
+
+    n = points.length;
+
+    while (n--) {
+        const c = detectObjectCollision(shape0, shape1, points[n]);
+
+        if (c && c.t < t) {
+            t = c.t;
+            collision = c;
+            collision.object1 = rocket;
+            collision.object2 = terrain;
         }
     }
 
@@ -197,27 +237,39 @@ const updateObject = overload((viewbox, object) => object.type, {
         if (rocket.position.velocity[0] + rocket.position.velocity[1]) {
             const collision = detectObjectTerrainCollision(terrain, rocket, p0, r0);
 
-            // Detect collisions
+            // Detect collision
             if (collision) {
-                collision.object = rocket;
                 collision.t0 = t0;
                 collision.t1 = t1;
-                collision.t  = collision.time * (t1 - t0) + t0;
+                collision.time = collision.t * (t1 - t0) + t0;
                 collision.velocity = copy(rocket.position.velocity);
 
                 // If velocity is high, or if the craft is not upright or the ground is not level
-                const ls = collision.s0;
-                const le = collision.s1;
-                const g = abs(gradient(ls, le));
+                const g = abs(gradient(collision.st, collision.et));
                 const vel = toPolar(collision.velocity)[0];
 
                 console.log('Collision', collision);
 
-                if (toPolar(collision.velocity)[0] > maxTouchdownVelocity) {
+                if (collision.object1 === rocket) {
                     remove(objects, rocket);
                     objects.push({
                         type: 'explosion',
-                        created: t0 + collision.time * (t1 - t0),
+                        created: collision.time,
+                        duration: 5,
+                        position: {
+                            value: collision.point.slice(0,2),
+                            velocity: multiply(0.4, rocket.position.velocity),
+                            acceleration: [0, -180],
+                            drag: 0.06
+                        }
+                    });
+                    message("<p>Ooops, the craft was punctured</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
+                }
+                else if (toPolar(collision.velocity)[0] > maxTouchdownVelocity) {
+                    remove(objects, rocket);
+                    objects.push({
+                        type: 'explosion',
+                        created: collision.time,
                         duration: 5,
                         position: {
                             value: collision.point.slice(0,2),
@@ -238,7 +290,7 @@ const updateObject = overload((viewbox, object) => object.type, {
                     remove(objects, rocket);
                     objects.push({
                         type: 'explosion',
-                        created: t0 + collision.time * (t1 - t0),
+                        created: collision.time,
                         duration: 5,
                         position: {
                             value: collision.point.slice(0,2),
@@ -262,7 +314,7 @@ const updateObject = overload((viewbox, object) => object.type, {
                     remove(objects, rocket);
                     objects.push({
                         type: 'explosion',
-                        created: t0 + collision.time * (t1 - t0),
+                        created: collision.time,
                         duration: 5,
                         position: {
                             value: collision.point.slice(0,2),
@@ -276,7 +328,7 @@ const updateObject = overload((viewbox, object) => object.type, {
                 }
                 else {
                     rocket.touchdown             = collision;
-                    rocket.position.value        = add(p0, multiply(collision.time, subtract(p0, rocket.position.value)));
+                    rocket.position.value        = add(p0, multiply(collision.t, subtract(p0, rocket.position.value)));
                     rocket.position.velocity     = [0, 0];
                     rocket.position.acceleration = [0, 0];
 
@@ -291,24 +343,37 @@ const updateObject = overload((viewbox, object) => object.type, {
     },
 
     'vapour': function updateVapour(terrainbox, vapour, t0, t1, objects, terrain, collisions) {
-        const p0 = {
-            0: vapour.position.value[0],
-            1: vapour.position.value[1]
-        };
+        const p0 = copy(vapour.position.value);
 
         updateValue(vapour.position, t1 - t0);
+        const p1 = copy(vapour.position.value);
 
         if (vapour.created < t1 - vapour.duration) {
             remove(objects, vapour);
         }
         // As a cheap optimisation, only look at vapour travelling down the way
         else if (vapour.position.velocity[1] > 0) {
-            let collision = detectTerrainCollision(terrain, p0, vapour.position.value);
+            const xmin = min(p0[0], p1[0]);
+            const ymin = min(p0[1], p1[1]);
+
+            // Grab a bit of terrain just larger than point path
+            const points = viewTerrain([
+                xmin,
+                ymin,
+                max(p0[0], p1[0]) - xmin,
+                max(p0[1], p1[1]) - ymin
+            ], terrain.data);
+
+            const collision = detectTerrainCollision(points, p0, p1);
 
             // Detect collisions
             if (collision) {
-                collision.object = vapour;
                 collision.velocity = copy(vapour.position.velocity);
+                collision.object1 = terrain;
+                collision.object2 = vapour;
+                collision.t0      = t0;
+                collision.t1      = t1;
+                collision.time    = collision.t * (t1 - t0) + t0;
 
                 vapour.position.value[0] = collision.point[0];
                 vapour.position.value[1] = collision.point[1];
