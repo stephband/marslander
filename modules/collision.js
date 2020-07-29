@@ -37,8 +37,9 @@ function timeAtOverlap(ys, ye, yp0, yp1) {
             undefined ;
 }
 
-function detectMovingLineOverlap(xs, ys, xe, ye, xp0, xp1) {
-    throw new Error('Needs algebra');
+function detectMovingLineOverlap(xs0, ys0, xe0, ye0, xs1, ys1, xe1, ye1, xp0, xp1) {
+    return;
+    //throw new Error('Needs algebra');
 
     // No intersect?
     if (t === undefined) { return; }
@@ -203,7 +204,7 @@ export function detectMovingLineMovingPoint(s0, e0, s1, e1, p0, p1) {
         if (b === 0) {
             // And I think that if c is 0 it is on the line
             if (c === 0) {
-                return detectMovingLineOverlap(xs, ys, xe, ye, xp0, xp1);
+                return detectMovingLineOverlap(xs0, ys0, xe0, ye0, xs1, ys1, xe1, ye1, xp0, xp1);
             }
 
             undefined;

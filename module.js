@@ -283,7 +283,7 @@ const updateObject = overload((viewbox, object) => object.type, {
                         message("<p>Smacked right into that, you did</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
                     }
                     else {
-                        message("<p>Going a bit too fast, you were</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
+                        message("<p>Came in a little hot, there</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
                     }
                 }
                 else if (rocket.rotation.value < minTouchdownRotation && rocket.rotation.value > maxTouchdownRotation) {
@@ -450,9 +450,21 @@ function start() {
         },
 
         data: [
-            [0, -15],
+            [0, -25],
+            [11, -12],
+            [12, -2],
             [10, 10],
-            [-10, 10]
+            [7, 10],
+            [6, 4],
+            [2, 4],
+            [3, 6],
+            [-3, 6],
+            [-2, 4],
+            [-6, 4],
+            [-7, 10],
+            [-10, 10],
+            [-12, -2],
+            [-11, -12]
         ]
     };
 
@@ -531,7 +543,7 @@ function start() {
             rocket.rotation.velocity = 0.6;
         },
 
-        'space': function() {
+        'space': function(e) {
             if (rocket.fuel.value <= 0) {
                 stats(null, null, null, 0);
                 return;
@@ -543,6 +555,8 @@ function start() {
 
             rocket.thrust = 600;
             rocket.fuel.velocity = -0.06;
+
+            e.preventDefault();
         },
 
         default: noop
