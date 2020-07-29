@@ -491,7 +491,7 @@ function start() {
         update(ctx, viewbox, terrainbox, updates, t0, t1, terrain, collisions);
 
         // Shake the camera when collisions hit the ground
-        const terrainCollisions = collisions.filter((collision) => collision.body === terrain);
+        const terrainCollisions = collisions.filter((collision) => collision.object1 === terrain);
 
         // Camera shake
         if (terrainCollisions.length) {
