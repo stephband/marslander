@@ -30,8 +30,8 @@ const min = Math.min;
 const max = Math.max;
 
 const canvas  = document.getElementById('game-canvas');
-canvas.width  = 1600;
-canvas.height = 900;
+canvas.width  = 1440;
+canvas.height = 810;
 const ctx     = canvas.getContext('2d');
 const style   = getComputedStyle(canvas);
 
