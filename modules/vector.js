@@ -34,7 +34,12 @@ export function add(n, vector) {
 }
 
 export function gradient(v0, v1) {
-    return (v1[1] - v0[1]) / (v1[0] - v0[0]);
+    const g = (v1[1] - v0[1]) / (v1[0] - v0[0]);
+    // Catch -Infinity and represent it as Infinity (there should be one
+    // possible value for each gradient)
+    return g === -Infinity ?
+        Infinity :
+        g ;
 }
 
 export function equal(v0, v1) {

@@ -2,7 +2,7 @@
 import { overload, noop, remove, toCartesian, toPolar, gaussian, wrap } from '../fn/module.js';
 import { events, toKey } from '../dom/module.js';
 
-import { add, copy, gradient, multiply, subtract } from './modules/vector.js';
+import { add, copy, equal, gradient, multiply, subtract } from './modules/vector.js';
 import { updateValue } from './modules/physics.js';
 import { renderTerrain, viewTerrain } from './modules/terrain.js';
 import { renderRocket, renderFuel } from './modules/rocket.js';
@@ -83,7 +83,12 @@ function detectTerrainCollision(terrain, p0, p1) {
         if (c && c.time < t) {
             collision = c;
             collision.body = terrain;
-            collision.line = [ls, le];
+            collision.s0 = ls;
+            collision.e0 = le;
+            collision.s1 = ls;
+            collision.e1 = le;
+            collision.p0 = p0;
+            collision.p1 = p1;
         }
     }
 
@@ -91,7 +96,7 @@ function detectTerrainCollision(terrain, p0, p1) {
 }
 
 function detectObjectTerrainCollision(terrain, rocket, p0, r0) {
-    if (rocket.position.value[0] === p0[0] && rocket.position.value[1] === p0[1]) {
+    if (equal(rocket.position.value, p0)) {
         return;
     }
 
@@ -194,16 +199,19 @@ const updateObject = overload((viewbox, object) => object.type, {
 
             // Detect collisions
             if (collision) {
-                collision.object   = rocket;
+                collision.object = rocket;
+                collision.t0 = t0;
+                collision.t1 = t1;
+                collision.t  = collision.time * (t1 - t0) + t0;
                 collision.velocity = copy(rocket.position.velocity);
 
                 // If velocity is high, or if the craft is not upright or the ground is not level
-                const ls = collision.line[0];
-                const le = collision.line[1];
+                const ls = collision.s0;
+                const le = collision.s1;
                 const g = abs(gradient(ls, le));
                 const vel = toPolar(collision.velocity)[0];
 
-                console.log('Collision', collision, p0, rocket.position.value);
+                console.log('Collision', collision);
 
                 if (toPolar(collision.velocity)[0] > maxTouchdownVelocity) {
                     remove(objects, rocket);

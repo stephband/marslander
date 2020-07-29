@@ -7,26 +7,26 @@ import { drawPath } from './canvas.js';
 function generateTerrain(viewbox, points) {
     if (!points.length) {
         // Seed the terrain
-        points.push({
-            0: 0,
-            1: Math.random() * 400 - 400
-        });
+        points.push(Float64Array.of(
+            0,
+            Math.random() * 400 - 400
+        ));
     }
 
     while(points[0][0] >= viewbox[0]) {
         // Add more onto beginning of terrain
-        points.unshift({
-            0: points[0][0] - Math.random() * 40 - 10,
-            1: Math.random() * 400 - 400
-        });
+        points.unshift(Float64Array.of(
+            points[0][0] - Math.random() * 40 - 10,
+            Math.random() * 400 - 400
+        ));
     }
 
     while(last(points)[0] <= viewbox[0] + viewbox[2]) {
         // Add more onto end of terrain
-        points.push({
-            0: last(points)[0] + Math.random() * 40 + 10,
-            1: Math.random() * 400 - 400
-        });
+        points.push(Float64Array.of(
+            last(points)[0] + Math.random() * 40 + 10,
+            Math.random() * 400 - 400
+        ));
     }
 }
 
@@ -58,13 +58,13 @@ export function renderTerrain(ctx, viewbox, style, terrain) {
     const visibleTerrain = viewTerrain(viewbox, terrain.data);
 
     // Complete the terrain polygon along the bottom edge of the viewbox
-    visibleTerrain.push({
-        0: viewbox[0] + viewbox[2],
-        1: viewbox[1] + viewbox[3]
-    }, {
-        0: viewbox[0],
-        1: viewbox[1] + viewbox[3]
-    });
+    visibleTerrain.push(Float64Array.of(
+        viewbox[0] + viewbox[2],
+        viewbox[1] + viewbox[3]
+    ), Float64Array.of(
+        viewbox[0],
+        viewbox[1] + viewbox[3]
+    ));
 
     drawPath(ctx, visibleTerrain);
     ctx.fillStyle = style.getPropertyValue('--terrain-fill');

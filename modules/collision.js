@@ -37,26 +37,23 @@ function timeAtIntersect(ys, ye, yp0, yp1) {
             undefined ;
 }
 
+function detectLineOverlap(xs, ys, xe, ye, xp0, yp0, xp1, yp1, g) {
+    const t = (g > -1 && g < 1) ?
+        timeAtIntersect(xs, xe, xp0, xp1) :
+        timeAtIntersect(ys, ye, yp0, yp1) ;
+
+    // No intersect?
+    if (t === undefined) { return; }
+
+    return {
+        //fn: detectLineOverlap,
+        //args: arguments,
+        time: t,
+        point: Float64Array.of(t * (xp1 - xp0) + xp0, t * (yp1 - yp0) + yp0)
+    };
+}
+
 function detectXLine(x, ys, ye, xp0, yp0, xp1, yp1) {
-    // Is it moving vertically?
-    if (xp0 === xp1) {
-        // Is it parallel with x?
-        if (x !== xp0) { return; }
-
-        // So when does it hit the line in the y axis ?
-        const t = timeAtIntersect(ys, ye, yp0, yp1);
-
-        // No intersect?
-        if (t === undefined) { return; }
-
-        return {
-            //fn: detectXLine,
-            //args: arguments,
-            time:  t,
-            point: Float64Array.of(x, t * (yp1 - yp0) + yp0)
-        };
-    }
-
     // It has at least some horizontal movement
     const t = (x - xp0) / (xp1 - xp0) ;
 
@@ -69,38 +66,16 @@ function detectXLine(x, ys, ye, xp0, yp0, xp1, yp1) {
     const ypt = t * (yp1 - yp0) + yp0;
 
     // Intersect outside line ends?
-    if (ypt < min(ys, ye) || ypt > max(ys, ye)) {
-        return;
-    }
-
-    return {
-        //fn: detectXLine,
-        //args: arguments,
-        time: t,
-        point: Float64Array.of(xpt, ypt)
-    };
+    return (ypt >= min(ys, ye) && ypt <= max(ys, ye)) ? {
+            //fn: detectXLine,
+            //args: arguments,
+            time: t,
+            point: Float64Array.of(xpt, ypt)
+        } :
+    undefined ;
 }
 
 function detectYLine(y, xs, xe, xp0, yp0, xp1, yp1) {
-    // Is it moving horizontally?
-    if (yp0 === yp1) {
-        // Is it parallel with y?
-        if (y !== yp0) { return; }
-
-        // So when does it hit the line in the y axis ?
-        const t = timeAtIntersect(xs, xe, xp0, xp1);
-
-        // No intersect?
-        if (t === undefined) { return; }
-
-        return {
-            //fn: detectYLine,
-            //args: arguments,
-            time: t,
-            point: Float64Array.of(t * (xp1 - xp0) + xp0, y)
-        };
-    }
-
     // It has at least some vertical movement
     const t = (y - yp0) / (yp1 - yp0) ;
 
@@ -110,24 +85,19 @@ function detectYLine(y, xs, xe, xp0, yp0, xp1, yp1) {
     }
 
     const xpt = t * (xp1 - xp0) + xp0;
-
-    // Intersect outside line ends?
-    if (xpt < min(xs, xe) || xpt > max(xs, xe)) {
-        return;
-    }
-
     const ypt = y;
 
-    return {
-        //fn: detectYLine,
-        //args: arguments,
-        time: t,
-        point: Float64Array.of(xpt, ypt)
-    };
+    // Intersect outside line ends?
+    return (xpt >= min(xs, xe) && xpt <= max(xs, xe)) ? {
+            //fn: detectXLine,
+            //args: arguments,
+            time: t,
+            point: Float64Array.of(xpt, ypt)
+        } :
+    undefined ;
 }
 
-function detectLine(xs, ys, xe, ye, xp0, yp0, xp1, yp1) {
-    const g = (ye - ys) / (xe - xs);
+function detectLine(xs, ys, xe, ye, xp0, yp0, xp1, yp1, g) {
     const t = (ys - yp0 + g * (xp0 - xs)) / (yp1 - yp0 + g * (xp0 - xp1));
 
     // Intersect outside time window?
@@ -153,24 +123,30 @@ function detectLine(xs, ys, xe, ye, xp0, yp0, xp1, yp1) {
     };
 }
 
-export function detectStaticLineMovingPoint(ls, le, p0, p1) {
-    const xs = ls[0];
-    const ys = ls[1];
-    const xe = le[0];
-    const ye = le[1];
+export function detectStaticLineMovingPoint(s, e, p0, p1) {
+    const g  = gradient(s, e);
+    const gp = gradient(p0, p1);
+    const xs  = s[0];
+    const ys  = s[1];
+    const xe  = e[0];
+    const ye  = e[1];
     const xp0 = p0[0];
     const yp0 = p0[1];
     const xp1 = p1[0];
     const yp1 = p1[1];
 
-    return xs === xe ?
-        // Vertical
-        detectXLine(xs, ys, ye, xp0, yp0, xp1, yp1) :
-    ys === ye ?
-        // Horizontal
-        detectYLine(ys, xs, xe, xp0, yp0, xp1, yp1) :
-        // Arbitrary
-        detectLine(xs, ys, xe, ye, xp0, yp0, xp1, yp1) ;
+    // Are line and trajectory parallel?
+    return g === gp ?
+        // Are line and trajectory overlapping?
+        g === gradient(s, p1) ?
+            detectLineOverlap(xs, ys, xe, ye, xp0, yp0, xp1, yp1, g) :
+        undefined :
+    // Line is vertical
+    g === Infinity ? detectXLine(xs, ys, ye, xp0, yp0, xp1, yp1) :
+    // Line is horizontal
+    g === 0 ? detectYLine(ys, xs, xe, xp0, yp0, xp1, yp1) :
+    // Line is angled
+    detectLine(xs, ys, xe, ye, xp0, yp0, xp1, yp1, g) ;
 }
 
 export function detectMovingLineMovingPoint(s0, e0, s1, e1, p0, p1) {
@@ -283,26 +259,33 @@ export function detectLinePoint(s0, e0, s1, e1, p0, p1) {
 
 window.d = detectLinePoint;
 
+console.groupCollapsed('Test collision.js');
 
 console.log('Vertical static line');
+
 console.log(0.5,   detectLinePoint([1,0],[1,2],[1,0],[1,2],[0,1],[2,1]), 'Horizontal motion point');
 console.log(0.5,   detectLinePoint([1,0],[1,2],[1,0],[1,2],[2,1],[0,1]), 'Horizontal inverse motion point');
 console.log('und', detectLinePoint([1,0],[1,2],[1,0],[1,2],[0,3],[2,3]), 'Horizontal motion point out of bounds');
-console.log(0,     detectLinePoint([1,0],[1,2],[1,0],[1,2],[1,1],[1,3]), 'Vertical motion point (along same line)');
-console.log(0.5,   detectLinePoint([1,0],[1,2],[1,0],[1,2],[1,3],[1,1]), 'Vertical inverse motion point (along same line)');
+console.log(0,     detectLinePoint([1,0],[1,2],[1,0],[1,2],[1,1],[1,3]), 'Vertical line moving point (same trajectory)');
+console.log(0.5,   detectLinePoint([1,0],[1,2],[1,0],[1,2],[1,3],[1,1]), 'Vertical inverse motion point (same trajectory)');
 console.log('und', detectLinePoint([1,0],[1,2],[1,0],[1,2],[1,3],[1,5]), 'Vertical motion point out of bounds');
 console.log(0,     detectLinePoint([1,0],[1,2],[1,0],[1,2],[1,1],[1,1]), 'Motionless point');
 console.log('und', detectLinePoint([1,0],[1,2],[1,0],[1,2],[1,3],[1,3]), 'Motionless point out of bounds');
 
 console.log('Horizontal static line');
-console.log(0,     detectLinePoint([0,1],[2,1],[0,1],[2,1],[1,1],[3,1]), 'Horizontal motion point');
-console.log(0.5,   detectLinePoint([0,1],[2,1],[0,1],[2,1],[3,1],[1,1]), 'Horizontal inverse motion point');
-console.log('und', detectLinePoint([0,1],[2,1],[0,1],[2,1],[3,1],[4,1]), 'Horizontal motion point out of bounds');
+console.log(0,     detectLinePoint([0,1],[2,1],[0,1],[2,1],[1,1],[3,1]), 'Horizontal line moving point (same trajectory)');
+console.log(0.5,   detectLinePoint([0,1],[2,1],[0,1],[2,1],[3,1],[1,1]), 'Horizontal line moving point (same trajectory)');
+console.log('und', detectLinePoint([0,1],[2,1],[0,1],[2,1],[3,1],[4,1]), 'Horizontal line point out of bounds');
+console.log('und', detectLinePoint([0,1],[2,1],[0,1],[2,1],[0,2],[2,2]), 'Horizontal line point out of bounds');
 console.log(0.5,   detectLinePoint([0,1],[2,1],[0,1],[2,1],[1,0],[1,2]), 'Vertical motion point');
 console.log(0.5,   detectLinePoint([0,1],[2,1],[0,1],[2,1],[1,2],[1,0]), 'Vertical inverse motion point');
 console.log('und', detectLinePoint([0,1],[2,1],[0,1],[2,1],[3,0],[3,2]), 'Vertical motion point out of bounds');
 console.log(0,     detectLinePoint([0,1],[2,1],[0,1],[2,1],[1,1],[1,1]), 'Motionless point');
 console.log('und', detectLinePoint([0,1],[2,1],[0,1],[2,1],[3,1],[3,1]), 'Motionless point out of bounds');
+
+console.log('Angled static line');
+console.log(0,     detectLinePoint([-2,-4],[2,4],[-2,-4],[2,4],[1,2],[3,6]), 'Angled line moving point (same trajectory)');
+console.log(0.5,   detectLinePoint([-2,4],[2,-4],[-2,4],[2,-4],[3,-6],[1,-2]), 'Angled line moving point (same trajectory)');
 
 console.log('Vertical travelling line');
 //console.log('und', detectLinePoint([0,0],[0,2],[2,0],[2,2],[0,1],[2,1]));
@@ -341,3 +324,5 @@ console.log('und',   detectLinePoint([0,2],[2,0],[0,0],[2,2],[0,3],[2,3]));
 console.log('und',   detectLinePoint([0,2],[2,0],[0,0],[2,2],[3,0],[3,2]));
 console.log('und',   detectLinePoint([0,2],[2,0],[0,0],[2,2],[2,3],[0,3]));
 console.log('und',   detectLinePoint([0,2],[2,0],[0,0],[2,2],[3,2],[3,0]));
+
+console.groupEnd();
