@@ -29,7 +29,7 @@ body > canvas {
 body > #game-message {
     grid-column: 1;
     grid-row: 1;
-    margin: min(1.875rem, 0.8vh) auto auto auto;
+    margin: max(2rem, 0.8vh) auto auto auto;
     position: relative;
     z-index: 2;
 }
@@ -37,7 +37,7 @@ body > #game-message {
 body > #game-stats {
     grid-column: 1;
     grid-row: 1;
-    margin: auto auto 0.1vh auto;
+    margin: auto auto 0.875rem auto;
     position: relative;
     z-index: 2;
 }
@@ -54,6 +54,8 @@ body > .controls-block {
     --rocket-fill: #030444;
     --fuel-fill:   #030444;
     --terrain-fill:#995522;
+    --terrain-fill-0:#3d2d20;
+    --terrain-fill-1:#8b5227;
     --vapour-fill: #ffffff;
     --sky-fill-top: #201a15;
     --sky-fill-bottom: #f0dbc8;
@@ -78,7 +80,7 @@ body > .controls-block {
     font-size: min(3.2vw, 2.5rem);
     line-height: 1em;
     text-align: center;
-    color: #541d10;
+    color: #2c2219;
 }
 
 #game-stats {
@@ -191,7 +193,8 @@ body > .controls-block {
 }
 
 .text-09 {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
+    line-height: 1rem;
     text-transform: uppercase;
 }
 </style>
@@ -204,7 +207,7 @@ body > .controls-block {
     <h2 class="text-09">Controls</h2>
     <kbd class="space-key-thumb key-thumb thumb">SPACE for thrust</kbd
     ><kbd class="left-key-thumb key-thumb thumb">LEFT to rotate anti-clockwise</kbd
-    ><kbd class="right-key-thumb key-thumb thumb">RIGHT to </kbd>
+    ><kbd class="right-key-thumb key-thumb thumb">RIGHT to rotate clockwise</kbd>
 </section>
 
 <script type="module">

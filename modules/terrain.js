@@ -67,6 +67,16 @@ export function renderTerrain(ctx, viewbox, style, terrain) {
     ));
 
     drawPath(ctx, visibleTerrain);
-    ctx.fillStyle = style.getPropertyValue('--terrain-fill');
+
+    const gradient = ctx.createLinearGradient(0,-400,0,500);
+    const color0 = style.getPropertyValue('--terrain-fill-0');
+    const color1 = style.getPropertyValue('--terrain-fill-1');
+
+    // Add three color stops
+    gradient.addColorStop(0, color0);
+    gradient.addColorStop(1, color1);
+
+    // Set the fill style and draw a rectangle
+    ctx.fillStyle = gradient;
     ctx.fill();
 }

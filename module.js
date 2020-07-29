@@ -48,7 +48,7 @@ const mach = 4800;
 const maxTouchdownGradient = 0.18;
 const minTouchdownRotation = 0.95;
 const maxTouchdownRotation = 0.05;
-const maxTouchdownVelocity = 40;
+const maxTouchdownVelocity = 45;
 
 let scale = 1;
 
@@ -256,8 +256,6 @@ const updateObject = overload((viewbox, object) => object.type, {
                 // If velocity is high, or if the craft is not upright or the ground is not level
                 const g = abs(gradient(collision.st, collision.et));
                 const vel = toPolar(collision.velocity)[0];
-
-                console.log('Collision', collision);
 
                 if (collision.object1 === rocket) {
                     remove(objects, rocket);
@@ -467,8 +465,8 @@ function start() {
             [7, 10],
             [6, 4],
             [2, 4],
-            [3, 6],
-            [-3, 6],
+            [3, 7],
+            [-3, 7],
             [-2, 4],
             [-6, 4],
             [-7, 10],
@@ -528,9 +526,8 @@ function start() {
 
     events('keydown', document)
     .each(overload(toKey, {
-        'left': function() {
+        'left': function(e) {
             if (rocket.fuel.value <= 0) {
-                stats(null, null, null, 0);
                 return;
             }
 
@@ -542,9 +539,8 @@ function start() {
             e.preventDefault();
         },
 
-        'right': function() {
+        'right': function(e) {
             if (rocket.fuel.value <= 0) {
-                stats(null, null, null, 0);
                 return;
             }
 
@@ -558,7 +554,6 @@ function start() {
 
         'space': function(e) {
             if (rocket.fuel.value <= 0) {
-                stats(null, null, null, 0);
                 return;
             }
 
@@ -576,15 +571,15 @@ function start() {
 
     events('keyup', document)
     .each(overload(toKey, {
-        'left': function() {
+        'left': function(e) {
             rocket.rotation.velocity = 0;
         },
 
-        'right': function() {
+        'right': function(e) {
             rocket.rotation.velocity = 0;
         },
 
-        'space': function() {
+        'space': function(e) {
             rocket.position.acceleration[0] = 0;
             rocket.position.acceleration[1] = gravity;
             rocket.thrust = 0;
