@@ -23,9 +23,12 @@ export function renderRocket(ctx, viewbox, style, rocket) {
     }*/
 }
 
+const controls = document.getElementById('controls');
 
 export function renderFuel(ctx, viewbox, style, rocket) {
-    ctx.save();
+    controls.style.setProperty('--fuel', rocket.fuel.value);
+
+    /*ctx.save();
     ctx.translate(viewbox[0], viewbox[1]);
     drawPath(ctx, [
         [0, 0],
@@ -36,4 +39,5 @@ export function renderFuel(ctx, viewbox, style, rocket) {
     ctx.fillStyle = style.getPropertyValue('--fuel-fill');
     ctx.fill();
     ctx.restore();
+    */
 }

@@ -530,6 +530,7 @@ function start() {
             }
 
             rocket.rotation.velocity = -0.6;
+            e.preventDefault();
         },
 
         'right': function() {
@@ -543,6 +544,7 @@ function start() {
             }
 
             rocket.rotation.velocity = 0.6;
+            e.preventDefault();
         },
 
         'space': function(e) {
@@ -557,7 +559,6 @@ function start() {
 
             rocket.thrust = 600;
             rocket.fuel.velocity = -0.06;
-
             e.preventDefault();
         },
 

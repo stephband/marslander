@@ -1,4 +1,6 @@
 
+<link rel="stylesheet" href="../bolt/style.min.css"></link>
+
 <style>
 html, body {
     overflow: hidden;
@@ -36,6 +38,14 @@ body > #game-stats {
     grid-column: 1;
     grid-row: 1;
     margin: auto auto 0.1vh auto;
+    position: relative;
+    z-index: 2;
+}
+
+body > .controls-block {
+    grid-column: 1;
+    grid-row: 1;
+    margin: auto auto 1rem auto;
     position: relative;
     z-index: 2;
 }
@@ -85,11 +95,110 @@ body > #game-stats {
     text-align: left;
     color: #ffffff;
 }
+
+.controls-block {
+    --fuel: 1;
+}
+
+.key-thumb {
+    font-size: 1rem;
+    position: relative;
+    padding-top: 3rem;
+
+    color: #c7e0e0;
+    background-color: #201a15;
+    border-radius: 0.2rem;
+    box-shadow: inset 0 0 0 0.0625rem #201a15;
+}
+
+.key-thumb.on {
+    background-color: #888888;
+}
+
+.key-thumb + .key-thumb {
+    margin-left: 0.5vw;
+}
+
+.space-key-thumb {
+    width: 15rem;
+    background-image: linear-gradient(to right, #201a15, #201a15 calc(var(--fuel) * 100%), currentcolor calc(var(--fuel) * 100%), currentcolor);
+}
+
+.space-key-thumb::before {
+    content: 'SPACE';
+    position: absolute;
+    top: 0%;
+    left: 0%;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    align-content: center;
+    justify-content: center;
+    opacity: calc(100 * var(--fuel) - 99);
+    transition: opacity 1s ease-out;
+}
+
+.space-key-thumb::after {
+    content: 'NO FUEL';
+    position: absolute;
+    top: 0%;
+    left: 0%;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    align-content: center;
+    justify-content: left;
+    padding-left: 0.9375rem;
+    color: #201a15;
+    opacity: calc((1 - var(--fuel)) * 100 - 99);
+    transition: opacity 0.2s ease-out;
+}
+
+.space-key-thumb.untouched::before {
+    opacity: 1;
+}
+
+.space-key-thumb.on {
+    background-image: linear-gradient(to right, #888888, #888888 calc(var(--fuel) * 100%), currentcolor calc(var(--fuel) * 100%), currentcolor);
+}
+
+.left-key-thumb,
+.right-key-thumb {
+    width: 3vw;
+}
+
+.left-key-thumb::before,
+.right-key-thumb::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -0.5rem;
+    margin-left: -0.45rem;
+}
+
+.left-key-thumb::before {
+    border-right: 0.9rem solid currentcolor;
+    border-top: 0.5rem solid transparent;
+    border-bottom: 0.5rem solid transparent;
+}
+
+.right-key-thumb::before {
+    border-left: 0.9rem solid currentcolor;
+    border-top: 0.5rem solid transparent;
+    border-bottom: 0.5rem solid transparent;
+}
 </style>
 
 <canvas id="game-canvas"></canvas>
 <div id="game-message" hidden></div>
 <div id="game-stats" hidden></div>
+
+<section class="controls-block block" id="controls">
+    <kbd class="space-key-thumb key-thumb thumb">SPACE</kbd
+    ><kbd class="left-key-thumb key-thumb thumb">LEFT</kbd
+    ><kbd class="right-key-thumb key-thumb thumb">RIGHT</kbd>
+</section>
 
 <script type="module">
     import './module.js';
