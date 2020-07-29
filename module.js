@@ -1,4 +1,13 @@
 
+/*
+Marslander
+
+Marslander is based on the original Marslander that came on the introductory
+cassette – yes, cassette – of software for the Acorn Electron.
+https://www.everygamegoing.com/landingMachineType/index/machine_folder/electron/thing_type/games/
+*/
+
+
 import { overload, noop, remove, toCartesian, toPolar, gaussian, wrap } from '../fn/module.js';
 import { events, toKey } from '../dom/module.js';
 
@@ -263,7 +272,7 @@ const updateObject = overload((viewbox, object) => object.type, {
                             drag: 0.06
                         }
                     });
-                    message("<p>Ooops, the craft was punctured</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
+                    message("<p>Ooops, the craft was punctured by a rock</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
                 }
                 else if (toPolar(collision.velocity)[0] > maxTouchdownVelocity) {
                     remove(objects, rocket);

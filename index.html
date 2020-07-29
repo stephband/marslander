@@ -29,7 +29,7 @@ body > canvas {
 body > #game-message {
     grid-column: 1;
     grid-row: 1;
-    margin: 0.2vh auto auto auto;
+    margin: min(1.875rem, 0.8vh) auto auto auto;
     position: relative;
     z-index: 2;
 }
@@ -45,7 +45,7 @@ body > #game-stats {
 body > .controls-block {
     grid-column: 1;
     grid-row: 1;
-    margin: auto auto 1rem auto;
+    margin: auto 2rem 1rem auto;
     position: relative;
     z-index: 2;
 }
@@ -75,7 +75,8 @@ body > .controls-block {
 
 #game-message p {
     font-family: Helvetica, Arial, sans-serif;
-    font-size: 3.2vw;
+    font-size: min(3.2vw, 2.5rem);
+    line-height: 1em;
     text-align: center;
     color: #541d10;
 }
@@ -188,6 +189,11 @@ body > .controls-block {
     border-top: 0.5rem solid transparent;
     border-bottom: 0.5rem solid transparent;
 }
+
+.text-09 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
 </style>
 
 <canvas id="game-canvas"></canvas>
@@ -195,9 +201,10 @@ body > .controls-block {
 <div id="game-stats" hidden></div>
 
 <section class="controls-block block" id="controls">
-    <kbd class="space-key-thumb key-thumb thumb">SPACE</kbd
-    ><kbd class="left-key-thumb key-thumb thumb">LEFT</kbd
-    ><kbd class="right-key-thumb key-thumb thumb">RIGHT</kbd>
+    <h2 class="text-09">Controls</h2>
+    <kbd class="space-key-thumb key-thumb thumb">SPACE for thrust</kbd
+    ><kbd class="left-key-thumb key-thumb thumb">LEFT to rotate anti-clockwise</kbd
+    ><kbd class="right-key-thumb key-thumb thumb">RIGHT to </kbd>
 </section>
 
 <script type="module">
