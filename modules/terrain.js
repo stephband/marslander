@@ -1,31 +1,30 @@
 
 /* Terrain */
 
-import { last } from '../../fn/module.js';
+import { gaussian, last } from '../../fn/module.js';
 import { drawPath } from './canvas.js';
 
 function generateTerrain(viewbox, points) {
     if (!points.length) {
         // Seed the terrain
-        points.push(Float64Array.of(
-            0,
-            Math.random() * 400 - 400
-        ));
+        points.push(Float64Array.of(0, 0));
     }
 
     while(points[0][0] >= viewbox[0]) {
         // Add more onto beginning of terrain
         points.unshift(Float64Array.of(
-            points[0][0] - Math.random() * 40 - 10,
-            Math.random() * 400 - 400
+            points[0][0] - (gaussian() * 25 + 30),
+            points[0][1] + (gaussian() * 100)
         ));
     }
 
     while(last(points)[0] <= viewbox[0] + viewbox[2]) {
+        const l = last(points);
+
         // Add more onto end of terrain
         points.push(Float64Array.of(
-            last(points)[0] + Math.random() * 40 + 10,
-            Math.random() * 400 - 400
+            l[0] + (gaussian() * 25 + 30),
+            l[1] + (gaussian() * 100)
         ));
     }
 }

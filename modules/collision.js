@@ -5,6 +5,18 @@ const pow = Math.pow;
 const min = Math.min;
 const max = Math.max;
 
+function min0To1(a, b) {
+    // And are they at times between 0 - 1?
+    return a >= 0 && a < 1 ?
+        b >= 0 && b < 1 ?
+            min(a, b) :
+            a :
+        b >= 0 && b < 1 ?
+            b :
+            undefined ;
+}
+
+
 function isPointInLine(s, e, p) {
     const g = gradient(s, e);
 
@@ -28,27 +40,50 @@ function timeAtOverlap(ys, ye, yp0, yp1) {
     const te = (ye - yp0) / (yp1 - yp0);
 
     // t is the min of ts and te within 0 - 1
-    return ts >= 0 && ts < 1 ?
-        te >= 0 && te < 1 ?
-            min(ts, te) :
-            ts :
-        te >= 0 && te < 1 ?
-            te :
-            undefined ;
+    return min0To1(ts, te);
 }
 
-function detectMovingLineOverlap(xs0, ys0, xe0, ye0, xs1, ys1, xe1, ye1, xp0, xp1) {
-    return;
-    //throw new Error('Needs algebra');
+function timeAtMovingOverlap(xs0, ys0, xe0, ye0, xs1, ys1, xe1, ye1, xp0, yp0, xp1, yp1) {
+    // Is it starting off intersecting?
+    const xmin = min(xs0, xe0);
+    const ymin = min(ys0, ye0);
+    const xmax = max(xs0, xe0);
+    const ymax = max(ys0, ye0);
+
+    if (xmax - xmin > ymax - ymin ?
+        xp0 > xmin && xp0 < xmax :
+        yp0 > ymin && yp0 < ymax) {
+        return 0;
+    }
+
+    // So when does it hit the start and end?
+    const g = (yp1 - yp0) / (xp1 - xp0) ;
+
+    const ts = (g > -1 && g < 1) ?
+        (xs0 - xp0) / (xp1 - xp0 - xs1 + xs0) :
+        (ys0 - yp0) / (yp1 - yp0 - ys1 + ys0) ;
+
+    const te = (g > -1 && g < 1) ?
+        (xe0 - xp0) / (xp1 - xp0 - xe1 + xe0) :
+        (ye0 - yp0) / (yp1 - yp0 - ye1 + ye0) ;
+
+    // And are they at times between 0 - 1?
+    return min0To1(ts, te);
+}
+
+function detectMovingLineOverlap(xs0, ys0, xe0, ye0, xs1, ys1, xe1, ye1, xp0, yp0, xp1, yp1) {
+    // Is it starting off intersecting?
+    const t = timeAtMovingOverlap(xs0, ys0, xe0, ye0, xs1, ys1, xe1, ye1, xp0, yp0, xp1, yp1);
 
     // No intersect?
     if (t === undefined) { return; }
 
     return {
-        //fn: detectLineOverlap,
-        //args: arguments,
         t: t,
-        point: Float64Array.of(t * (xp1 - xp0) + xp0, t * (yp1 - yp0) + yp0)
+        point: Float64Array.of(
+            t * (xp1 - xp0) + xp0,
+            t * (yp1 - yp0) + yp0
+        )
     };
 }
 
@@ -202,9 +237,9 @@ export function detectMovingLineMovingPoint(s0, e0, s1, e1, p0, p1) {
         // If b is also 0 we have a problem. I think this means that p
         // is travelling parallel to the line.
         if (b === 0) {
-            // And I think that if c is 0 it is on the line
+            // And if c is 0 it is on the line
             if (c === 0) {
-                return detectMovingLineOverlap(xs0, ys0, xe0, ye0, xs1, ys1, xe1, ye1, xp0, xp1);
+                return detectMovingLineOverlap(xs0, ys0, xe0, ye0, xs1, ys1, xe1, ye1, xp0, yp0, xp1, yp1);
             }
 
             undefined;
@@ -275,10 +310,67 @@ export function detectLinePoint(s0, e0, s1, e1, p0, p1) {
     detectMovingLineMovingPoint(s0, e0, s1, e1, p0, p1) ;
 }
 
+function detectObjectPoint(shape0, shape1, p0, p1) {
+    if (shape0.length !== shape1.length) {
+        throw new Error('shape0 and shape1 must have equal length');
+    }
+
+    let n = shape0.length - 1;
+    let t = Infinity;
+    let collision;
+
+    while(n--) {
+        const c = detectLinePoint(shape0[n], shape0[n + 1], shape1[n], shape1[n + 1], p0, p1);
+
+        if (c && c.t < t) {
+            t = c.t;
+            collision = c;
+            collision.s0 = shape0[n];
+            collision.e0 = shape0[n + 1];
+            collision.s1 = shape1[n];
+            collision.e1 = shape1[n + 1];
+            collision.p0 = p0;
+            collision.p1 = p1;
+        }
+    }
+}
+
+function detectObjectObject(shapeA0, shapeA1, shapeB0, shapeB1) {
+    if (shapeB0.length !== shapeB1.length) {
+        throw new Error('shape0 and shape1 must have equal length');
+    }
+
+    let n = shapeB0.length;
+    let t = Infinity;
+    let collision;
+
+    while(n--) {
+        const c = detectObjectPoint(shapeA0, shapeA1, shapeB0[n], shapeB1[n]);
+
+        if (c && c.t < t) {
+            t = c.t;
+            collision = c;
+        }
+    }
+
+    n = shapeA0.length;
+
+    while(n--) {
+        const c = detectObjectPoint(shapeB0, shapeB1, shapeA0[n], shapeA1[n]);
+
+        if (c && c.t < t) {
+            t = c.t;
+            collision = c;
+        }
+    }
+
+    return collision;
+}
+
 
 window.d = detectLinePoint;
 
-console.groupCollapsed('Test collision.js');
+console.group('Test collision.js');
 
 console.log('Vertical static line');
 
@@ -307,7 +399,7 @@ console.log(0,     detectLinePoint([-2,-4],[2,4],[-2,-4],[2,4],[1,2],[3,6]), 'An
 console.log(0.5,   detectLinePoint([-2,4],[2,-4],[-2,4],[2,-4],[3,-6],[1,-2]), 'Angled line moving point (same trajectory)');
 
 console.log('Vertical travelling line');
-//console.log('und', detectLinePoint([0,0],[0,2],[2,0],[2,2],[0,1],[2,1]));
+console.log(0, detectLinePoint([0,0],[0,2],[2,0],[2,2],[0,1],[2,1]));
 console.log(0.5,   detectLinePoint([0,0],[0,2],[2,0],[2,2],[1,0],[1,2]));
 console.log(0.5,   detectLinePoint([0,0],[0,2],[2,0],[2,2],[1,1],[1,1]), 'Motionless point');
 console.log(0.5,   detectLinePoint([0,0],[0,2],[2,0],[2,2],[2,1],[0,1]));
@@ -316,7 +408,7 @@ console.log(0.5,   detectLinePoint([0,0],[0,2],[2,0],[2,2],[1,1],[1,1]), 'Motion
 
 console.log('Horizontal travelling line');
 console.log(0.5,   detectLinePoint([0,0],[2,0],[0,2],[2,2],[0,1],[2,1]));
-//console.log('und', detectLinePoint([0,0],[2,0],[0,2],[2,2],[1,0],[1,2]));
+console.log(0,     detectLinePoint([0,0],[2,0],[0,2],[2,2],[1,0],[1,2]));
 console.log(0.5,   detectLinePoint([0,0],[2,0],[0,2],[2,2],[1,1],[1,1]), 'Motionless point');
 console.log(0.5,   detectLinePoint([0,0],[2,0],[0,2],[2,2],[2,1],[0,1]));
 console.log(0.5,   detectLinePoint([0,0],[2,0],[0,2],[2,2],[1,2],[1,0]));

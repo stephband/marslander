@@ -18,6 +18,7 @@ import { renderRocket, renderFuel } from './modules/rocket.js';
 import { renderBackground } from './modules/background.js';
 import { renderGrid } from './modules/grid.js';
 import { updateVapour, renderVapour } from './modules/vapour.js';
+import { updateMeteor, renderMeteor } from './modules/meteor.js';
 import { updateExplosion, renderExplosion } from './modules/explosion.js';
 import { detectLinePoint } from './modules/collision.js';
 import { message, stats } from './modules/message.js';
@@ -394,6 +395,8 @@ const updateObject = overload((viewbox, object) => object.type, {
         }
     },
 
+    'meteor': updateMeteor,
+
     'explosion': updateExplosion
 });
 
@@ -406,6 +409,7 @@ const renderObject = overload(getObjectType, {
     'terrain': renderTerrain,
     'grid': renderGrid,
     'vapour': renderVapour,
+    'meteor': renderMeteor,
     'explosion': renderExplosion,
     'background': renderBackground
 });
@@ -418,9 +422,7 @@ function render(ctx, viewbox, terrainbox, objects, t0, t1) {
     ctx.save();
     ctx.scale(scale, scale);
     ctx.translate(-terrainbox[0], -terrainbox[1]);
-
     objects.forEach((object) => renderObject(ctx, terrainbox, style, object, t0, t1));
-
     ctx.restore();
 }
 
@@ -474,7 +476,38 @@ function start() {
             [-12, -2],
             [-11, -12],
             [-6.5, -21]
+        ],
+
+        /*
+        // SpaceX Starship 2nd stage
+        data: [
+            [0, -250],
+            [12, -240],
+            [18, -230],
+            [25, -210],
+            [29, -190],
+            [30, -170],
+            [25, -170],
+            [25, 0],
+            [28, 40],
+            [30, 80],
+            [30, 100],
+            [26, 100],
+            [26, 98],
+            [-26, 98],
+            [-26, 100],
+            [-30, 100],
+            [-30, 80],
+            [-28, 40],
+            [-25, 0],
+            [-25, -170],
+            [-30, -170],
+            [-29, -190],
+            [-25, -210],
+            [-18, -230],
+            [-12, -240]
         ]
+        */
     };
 
     const background = {
@@ -486,9 +519,26 @@ function start() {
         data: []
     };
 
-    const updates = [rocket];
-    const renders = [background, terrain];
+    const meteor = {
+        type: 'meteor',
 
+        position: {
+            value: [-2600, -3900],
+            velocity: [2400, 2400],
+            drag: 0.0016,
+            acceleration: [0, gravity]
+        },
+
+        data: [
+            [0, 5],
+            [5, 0],
+            [0, -5],
+            [-5, 0]
+        ]
+    };
+
+    const updates = [rocket/*, meteor*/];
+    const renders = [background, terrain];
     let t0 = 0;
 
     function frame(time) {
