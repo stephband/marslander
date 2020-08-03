@@ -24,7 +24,7 @@ import { detectLinePoint } from './modules/collision.js';
 import { message, stats } from './modules/message.js';
 
 const random = Math.random;
-const pi = Math.PI;
+const pi  = Math.PI;
 const pow = Math.pow;
 const abs = Math.abs;
 const min = Math.min;
