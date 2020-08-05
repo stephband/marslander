@@ -641,5 +641,5 @@ function start() {
 }
 
 
-start();
+//start();
 
