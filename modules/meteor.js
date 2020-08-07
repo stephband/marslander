@@ -28,7 +28,7 @@ export function collideMeteor(terrainbox, meteor, t0, t1, objects) {
     updateValue(meteor.position, t1 - t0);
 }
 
-export function renderMeteor(ctx, viewbox, style, meteor, t0, t1) {
+export function renderMeteor(ctx, viewbox, style, meteor, time) {
     ctx.save();
     ctx.translate(meteor.position.value[0], meteor.position.value[1]);
     drawPath(ctx, meteor.data);

@@ -8,33 +8,28 @@ https://www.everygamegoing.com/landingMachineType/index/machine_folder/electron/
 */
 
 
-import { overload, noop, remove, toCartesian, toPolar, gaussian, wrap } from '../fn/module.js';
+import { overload, noop, toCartesian, toPolar } from '../fn/module.js';
 import { events, toKey } from '../dom/module.js';
 
-import { add, copy, equal, gradient, multiply, subtract } from './modules/vector.js';
-import { updateValue } from './modules/physics.js';
-import { renderTerrain, viewTerrain } from './modules/terrain.js';
-import { renderRocket, renderFuel } from './modules/rocket.js';
-import { renderBackground } from './modules/background.js';
-import { renderGrid } from './modules/grid.js';
-import { updateVapour, renderVapour } from './modules/vapour.js';
-import { updateMeteor, renderMeteor } from './modules/meteor.js';
-import { updateExplosion, renderExplosion } from './modules/explosion.js';
-import { detectLinePoint } from './modules/collision.js';
+import { detectLinePoint } from '../colin/modules/collision.js';
+import { Renderer } from '../colin/modules/renderer.js';
+import { add, copy, equal, gradient, multiply, subtract } from '../colin/modules/vector.js';
+
+import * as Camera from './modules/camera.js';
+import * as Terrain from './modules/terrain.js';
+import * as Rocket from './modules/rocket.js';
+import * as Vapour from './modules/vapour.js';
+import * as Background from './modules/background.js';
+import * as Explosion from './modules/explosion.js';
 import { message, stats } from './modules/message.js';
 
-const random = Math.random;
 const pi  = Math.PI;
 const pow = Math.pow;
 const abs = Math.abs;
 const min = Math.min;
 const max = Math.max;
 
-const canvas  = document.getElementById('game-canvas');
-canvas.width  = 1440;
-canvas.height = 810;
-const ctx     = canvas.getContext('2d');
-const style   = getComputedStyle(canvas);
+const viewbox = [0, 0, 1440, 810];
 
 // Actual gravity on mars is 3.7m/s2. We have an arbitrary scale of
 // 1m = 5px, so true gravity should be 3.7 * 5 = 18.5. The game is
@@ -53,7 +48,14 @@ const maxTouchdownVelocity = 45;
 
 let scale = 1;
 
+
+
+/* Update */
+
 function updateViewbox(viewbox, rocket, duration) {
+    // This should be updated after rocket updates, and perhaps only just
+    // before render, seeing as it is camera related
+
     const speed = toPolar(rocket.position.velocity)[0];
     const targetScale = 1 + speed * 0.0004;
 
@@ -69,7 +71,22 @@ function updateViewbox(viewbox, rocket, duration) {
     return viewbox;
 }
 
-const getObjectType = (ctx, viewbox, style, object) => object.type;
+const update = overload((t0, t1, object) => object.type, {
+    rocket:    Rocket.update,
+    vapour:    Vapour.update,
+    explosion: Explosion.update,
+    terrain:   Terrain.update,
+    default: (function(ignore) {
+        return function(t0, t1, object) {
+            if (ignore[object.type]) { return; }
+            ignore[object.type] = object.type;
+            console.log('No update() for "' + object.type + '"');
+        }
+    })({})
+});
+
+
+/* Detect */
 
 function detectTerrainCollision(points, p0, p1) {
     let n = points.length - 1;
@@ -119,9 +136,11 @@ function detectObjectCollision(shape0, shape1, point) {
     return collision;
 }
 
-function detectObjectTerrainCollision(terrain, rocket, p0, r0) {
-    const p1 = rocket.position.value;
-    const r1 = rocket.rotation.value;
+function detectObjectTerrainCollision(terrain, terrain1, rocket0, rocket1) {
+    const p0 = rocket0.position.value;
+    const r0 = rocket0.rotation.value;
+    const p1 = rocket1.position.value;
+    const r1 = rocket1.rotation.value;
 
     if (equal(p1, p0)) {
         return;
@@ -143,7 +162,7 @@ function detectObjectTerrainCollision(terrain, rocket, p0, r0) {
     const ymin = min(p0[1], p1[1]);
 
     // Grab a bit of terrain just larger than point path
-    const points = viewTerrain([
+    const points = Terrain.view([
         xmin,
         ymin,
         max(p0[0], p1[0]) - xmin,
@@ -180,466 +199,278 @@ function detectObjectTerrainCollision(terrain, rocket, p0, r0) {
     return collision;
 }
 
-const updateObject = overload((viewbox, object) => object.type, {
-    'rocket': function(terrainbox, rocket, t0, t1, objects, terrain, collisions) {
-        const p0 = copy(rocket.position.value);
-        const r0 = rocket.rotation.value;
+const detect = overload((a0, a1, b0, b1) => a0.type + '-' + b0.type, {
+    'terrain-rocket': detectObjectTerrainCollision,
 
-        if (rocket.touchdown) {
-            // Do nothing
-            //console.log('TOUCHDOWN')
+    'terrain-vapour': function(terrain, terrain1, vapour, vapour1) {
+        // As a cheap optimisation, only look at vapour travelling down the way
+        if (vapour.position.velocity[1] <= 0) { return; }
+
+        const xmin = min(p0[0], p1[0]);
+        const ymin = min(p0[1], p1[1]);
+
+        // Grab a bit of terrain just larger than point path
+        const points = viewTerrain([
+            xmin,
+            ymin,
+            max(p0[0], p1[0]) - xmin,
+            max(p0[1], p1[1]) - ymin
+        ], terrain.data);
+
+        return detectTerrainCollision(points, p0, p1);
+    },
+
+    default: (function(ignore) {
+        return function(a0, a1, b0, b1) {
+            const type = a0.type + '-' + b0.type;
+            if (ignore[type]) { return; }
+            ignore[type] = true;
+            console.log('No detect() for "' + type + '"');
         }
-        else if (rocket.fuel.value > 0 && rocket.thrust) {
-            updateValue(rocket.fuel, t1 - t0);
+    })({})
+});
 
-            const acceleration = toCartesian([
-                rocket.thrust,
-                rocket.rotation.value * 2 * pi
-            ]);
 
-            rocket.position.acceleration[0] = acceleration[0];
-            rocket.position.acceleration[1] = -acceleration[1];
+/* Collide */
 
-            let n = Math.floor(-8000 * rocket.fuel.velocity * (t1 - t0));
+const collide = overload((collision) => collision.objects[0] + '-' + collision.objects[1], {
+    'rocket-terrain': function(collision) {
+        const rocket = collision.objects.find((object) => object.type === 'rocket');
+        collision.velocity = copy(rocket.position.velocity);
 
-            while (n--) {
-                var rotation = toCartesian([-8, rocket.rotation.value * 2 * pi]);
+        // If velocity is high, or if the craft is not upright or the ground is not level
+        const g = abs(gradient(collision.st, collision.et));
+        const vel = toPolar(collision.velocity)[0];
 
-                objects.push({
-                    type: 'vapour',
+        if (collision.objects[0] === rocket) {
+            remove(objects, rocket);
+            objects.push({
+                type: 'explosion',
+                created: collision.time,
+                duration: 5,
+                position: {
+                    value: collision.point.slice(0,2),
+                    velocity: multiply(0.4, rocket.position.velocity),
+                    acceleration: [0, -180],
+                    drag: 0.06
+                }
+            });
+            message("<p>Ooops, the craft was punctured by a rock</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
+        }
+        else if (toPolar(collision.velocity)[0] > maxTouchdownVelocity) {
+            remove(objects, rocket);
+            objects.push({
+                type: 'explosion',
+                created: collision.time,
+                duration: 5,
+                position: {
+                    value: collision.point.slice(0,2),
+                    velocity: multiply(0.4, rocket.position.velocity),
+                    acceleration: [0, -180],
+                    drag: 0.06
+                }
+            });
 
-                    created: t0,
-
-                    duration: 1 + random() * 0.8,
-
-                    position: {
-                        value: Float64Array.of(
-                            rocket.position.value[0] + rotation[0],
-                            rocket.position.value[1] - rotation[1]
-                        ),
-
-                        velocity: Float64Array.of(
-                            rocket.position.velocity[0] + (-0.8 - random() * 0.6) * rocket.position.acceleration[0],
-                            rocket.position.velocity[1] + (-0.8 - random() * 0.6) * rocket.position.acceleration[1]
-                        ),
-
-                        drag: 0.05,
-
-                        acceleration: Float64Array.of(
-                            0,
-                            gravity / 3
-                        )
-                    },
-
-                    data: [0, 0, 3]
-                });
+            if (vel > 120) {
+                message("<p>Smacked right into that, you did</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
             }
+            else {
+                message("<p>Came in a little hot, there</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
+            }
+        }
+        else if (rocket.rotation.value < minTouchdownRotation && rocket.rotation.value > maxTouchdownRotation) {
+            remove(objects, rocket);
+            objects.push({
+                type: 'explosion',
+                created: collision.time,
+                duration: 5,
+                position: {
+                    value: collision.point.slice(0,2),
+                    velocity: multiply(0.4, rocket.position.velocity),
+                    acceleration: [0, -180],
+                    drag: 0.06
+                }
+            });
+
+            if (rocket.rotation.value < 0.6 && rocket.rotation.value > 0.4) {
+                message("<p>You landed upside down</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
+            }
+            if (rocket.rotation.value < 0.8 && rocket.rotation.value > 0.2) {
+                message("<p>Your craft can't land on it's side</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
+            }
+            else {
+                message("<p>Your craft toppled over</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
+            }
+        }
+        else if (g > maxTouchdownGradient) {
+            remove(objects, rocket);
+            objects.push({
+                type: 'explosion',
+                created: collision.time,
+                duration: 5,
+                position: {
+                    value: collision.point.slice(0,2),
+                    velocity: multiply(0.4, rocket.position.velocity),
+                    acceleration: [0, -180],
+                    drag: 0.06
+                }
+            });
+
+            message("<p>You need to find flatter ground</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
         }
         else {
-            rocket.position.acceleration[0] = 0;
-            rocket.position.acceleration[1] = gravity;
-        }
+            rocket.touchdown             = collision;
+            rocket.position.value        = add(p0, multiply(collision.t, subtract(p0, rocket.position.value)));
+            rocket.position.velocity     = [0, 0];
+            rocket.position.acceleration = [0, 0];
 
-        updateValue(rocket.position, t1 - t0);
-        updateValue(rocket.rotation, t1 - t0, wrap(0, 1));
-
-        // If the rocket is moving
-        if (rocket.position.velocity[0] + rocket.position.velocity[1]) {
-            const collision = detectObjectTerrainCollision(terrain, rocket, p0, r0);
-
-            // Detect collision
-            if (collision) {
-                collision.t0 = t0;
-                collision.t1 = t1;
-                collision.time = collision.t * (t1 - t0) + t0;
-                collision.velocity = copy(rocket.position.velocity);
-
-                // If velocity is high, or if the craft is not upright or the ground is not level
-                const g = abs(gradient(collision.st, collision.et));
-                const vel = toPolar(collision.velocity)[0];
-
-                if (collision.object1 === rocket) {
-                    remove(objects, rocket);
-                    objects.push({
-                        type: 'explosion',
-                        created: collision.time,
-                        duration: 5,
-                        position: {
-                            value: collision.point.slice(0,2),
-                            velocity: multiply(0.4, rocket.position.velocity),
-                            acceleration: [0, -180],
-                            drag: 0.06
-                        }
-                    });
-                    message("<p>Ooops, the craft was punctured by a rock</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
-                }
-                else if (toPolar(collision.velocity)[0] > maxTouchdownVelocity) {
-                    remove(objects, rocket);
-                    objects.push({
-                        type: 'explosion',
-                        created: collision.time,
-                        duration: 5,
-                        position: {
-                            value: collision.point.slice(0,2),
-                            velocity: multiply(0.4, rocket.position.velocity),
-                            acceleration: [0, -180],
-                            drag: 0.06
-                        }
-                    });
-
-                    if (vel > 120) {
-                        message("<p>Smacked right into that, you did</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
-                    }
-                    else {
-                        message("<p>Came in a little hot, there</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
-                    }
-                }
-                else if (rocket.rotation.value < minTouchdownRotation && rocket.rotation.value > maxTouchdownRotation) {
-                    remove(objects, rocket);
-                    objects.push({
-                        type: 'explosion',
-                        created: collision.time,
-                        duration: 5,
-                        position: {
-                            value: collision.point.slice(0,2),
-                            velocity: multiply(0.4, rocket.position.velocity),
-                            acceleration: [0, -180],
-                            drag: 0.06
-                        }
-                    });
-
-                    if (rocket.rotation.value < 0.6 && rocket.rotation.value > 0.4) {
-                        message("<p>You landed upside down</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
-                    }
-                    if (rocket.rotation.value < 0.8 && rocket.rotation.value > 0.2) {
-                        message("<p>Your craft can't land on it's side</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
-                    }
-                    else {
-                        message("<p>Your craft toppled over</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
-                    }
-                }
-                else if (g > maxTouchdownGradient) {
-                    remove(objects, rocket);
-                    objects.push({
-                        type: 'explosion',
-                        created: collision.time,
-                        duration: 5,
-                        position: {
-                            value: collision.point.slice(0,2),
-                            velocity: multiply(0.4, rocket.position.velocity),
-                            acceleration: [0, -180],
-                            drag: 0.06
-                        }
-                    });
-
-                    message("<p>You need to find flatter ground</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
-                }
-                else {
-                    rocket.touchdown             = collision;
-                    rocket.position.value        = add(p0, multiply(collision.t, subtract(p0, rocket.position.value)));
-                    rocket.position.velocity     = [0, 0];
-                    rocket.position.acceleration = [0, 0];
-
-                    message("<p>Nice landing, pilot</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
-                }
-
-                collisions.push(collision);
-            }
-        }
-
-        updateViewbox(terrainbox, rocket, t1 - t0);
-    },
-
-    'vapour': function updateVapour(terrainbox, vapour, t0, t1, objects, terrain, collisions) {
-        const p0 = copy(vapour.position.value);
-
-        updateValue(vapour.position, t1 - t0);
-        const p1 = copy(vapour.position.value);
-
-        if (vapour.created < t1 - vapour.duration) {
-            remove(objects, vapour);
-        }
-        // As a cheap optimisation, only look at vapour travelling down the way
-        else if (vapour.position.velocity[1] > 0) {
-            const xmin = min(p0[0], p1[0]);
-            const ymin = min(p0[1], p1[1]);
-
-            // Grab a bit of terrain just larger than point path
-            const points = viewTerrain([
-                xmin,
-                ymin,
-                max(p0[0], p1[0]) - xmin,
-                max(p0[1], p1[1]) - ymin
-            ], terrain.data);
-
-            const collision = detectTerrainCollision(points, p0, p1);
-
-            // Detect collisions
-            if (collision) {
-                collision.velocity = copy(vapour.position.velocity);
-                collision.object1 = terrain;
-                collision.object2 = vapour;
-                collision.t0      = t0;
-                collision.t1      = t1;
-                collision.time    = collision.t * (t1 - t0) + t0;
-
-                vapour.position.value[0] = collision.point[0];
-                vapour.position.value[1] = collision.point[1];
-                vapour.position.velocity[0] = 0;
-                vapour.position.velocity[1] = 1;
-                vapour.position.acceleration[0] = 0;
-                vapour.position.acceleration[1] = -160;
-
-                collisions.push(collision);
-            }
+            message("<p>Nice landing, pilot</p>", vel, g, rocket.rotation.value, rocket.fuel.value);
         }
     },
 
-    'meteor': updateMeteor,
+    'terrain-vapour': function(collision) {
+        const terrain = collision.objects[0];
+        const vapour  = collision.objects[1];
 
-    'explosion': updateExplosion
+        // Detect collisions
+        collision.velocity = copy(vapour.position.velocity);
+        collision.object1 = terrain;
+        collision.object2 = vapour;
+        collision.t0      = t0;
+        collision.t1      = t1;
+        collision.time    = collision.t * (t1 - t0) + t0;
+
+        vapour.position.value[0] = collision.point[0];
+        vapour.position.value[1] = collision.point[1];
+        vapour.position.velocity[0] = 0;
+        vapour.position.velocity[1] = 1;
+        vapour.position.acceleration[0] = 0;
+        vapour.position.acceleration[1] = -160;
+    },
+
+    default: (function(ignore) {
+        return function(collision) {
+            const type = collision.objects[0] + '-' + collision.objects[1];
+            if (ignore[type]) { return; }
+            ignore[type] = true;
+            console.log('No collide() for "' + type + '"');
+        }
+    })({})
 });
 
-function update(ctx, viewbox, terrainbox, objects, t0, t1, terrain, collisions) {
-    objects.forEach((object) => updateObject(terrainbox, object, t0, t1, objects, terrain, collisions));
-}
 
-const renderObject = overload(getObjectType, {
-    'rocket': renderRocket,
-    'terrain': renderTerrain,
-    'grid': renderGrid,
-    'vapour': renderVapour,
-    'meteor': renderMeteor,
-    'explosion': renderExplosion,
-    'background': renderBackground
+/* Render */
+
+const getObjectType = (ctx, viewbox, style, object) => object.type;
+
+const render = overload(getObjectType, {
+    'camera':     Camera.render,
+    'rocket':     Rocket.render,
+    'terrain':    Terrain.render,
+    'vapour':     Vapour.render,
+    'explosion':  Explosion.render,
+    'background': Background.render,
+
+    default: (function(ignore) {
+        return function(ctx, viewbox, style, object) {
+            const type = object.type;
+            if (ignore[type]) { return; }
+            ignore[type] = true;
+            console.log('No render() for "' + type + '"');
+        }
+    })({})
 });
 
-function render(ctx, viewbox, terrainbox, objects, t0, t1) {
-    ctx.clearRect.apply(ctx, viewbox);
 
-    const scale = viewbox[2] / terrainbox[2];
+/* Scene */
 
-    ctx.save();
-    ctx.scale(scale, scale);
-    ctx.translate(-terrainbox[0], -terrainbox[1]);
-    objects.forEach((object) => renderObject(ctx, terrainbox, style, object, t0, t1));
-    ctx.restore();
-}
+const rocket = Rocket.from({});
 
-function start() {
-    const collisions = [];
-    const viewbox    = [0, 0, canvas.width, canvas.height];
-    const terrainbox = [0, 0, canvas.width, canvas.height];
-
-    const camera = {
-        type: 'camera',
-        data: terrainbox
-    };
-
-    const rocket = {
-        type: 'rocket',
-
-        position: {
-            value: [0, -1200],
-            velocity: [20, 200],
-            drag: 0.0016,
-            acceleration: [0, gravity]
+Renderer(
+    document.getElementById('game-canvas'),
+    viewbox,
+    update,
+    detect,
+    collide,
+    render,
+    viewbox, [{
+            type: 'camera',
+            data: viewbox,
+            collide: false
+        }, {
+            type: 'background',
+            collide: false
         },
+        rocket,
+        Terrain.from({})
+    ]
+)
+.start();
 
-        rotation: {
-            value: 0,
-            velocity: 0,
-            acceleration: 0
-        },
 
-        fuel: {
-            min: 0,
-            value: 1,
-            velocity: 0
-        },
+/* Controls */
 
-        data: [
-            [0, -25],
-            [6.5, -21],
-            [11, -12],
-            [12, -2],
-            [10, 10],
-            [7, 10],
-            [6, 4],
-            [2, 4],
-            [3, 7],
-            [-3, 7],
-            [-2, 4],
-            [-6, 4],
-            [-7, 10],
-            [-10, 10],
-            [-12, -2],
-            [-11, -12],
-            [-6.5, -21]
-        ],
-
-        /*
-        // SpaceX Starship 2nd stage
-        data: [
-            [0, -250],
-            [12, -240],
-            [18, -230],
-            [25, -210],
-            [29, -190],
-            [30, -170],
-            [25, -170],
-            [25, 0],
-            [28, 40],
-            [30, 80],
-            [30, 100],
-            [26, 100],
-            [26, 98],
-            [-26, 98],
-            [-26, 100],
-            [-30, 100],
-            [-30, 80],
-            [-28, 40],
-            [-25, 0],
-            [-25, -170],
-            [-30, -170],
-            [-29, -190],
-            [-25, -210],
-            [-18, -230],
-            [-12, -240]
-        ]
-        */
-    };
-
-    const background = {
-        type: 'background'
-    };
-
-    const terrain = {
-        type: 'terrain',
-        data: []
-    };
-
-    const meteor = {
-        type: 'meteor',
-
-        position: {
-            value: [-2600, -3900],
-            velocity: [2400, 2400],
-            drag: 0.0016,
-            acceleration: [0, gravity]
-        },
-
-        data: [
-            [0, 5],
-            [5, 0],
-            [0, -5],
-            [-5, 0]
-        ]
-    };
-
-    const updates = [rocket/*, meteor*/];
-    const renders = [background, terrain];
-    let t0 = 0;
-
-    function frame(time) {
-        const t1 = time / 1000;
-
-        collisions.length = 0;
-        update(ctx, viewbox, terrainbox, updates, t0, t1, terrain, collisions);
-
-        // Shake the camera when collisions hit the ground
-        const terrainCollisions = collisions.filter((collision) => collision.object1 === terrain);
-
-        // Camera shake
-        if (terrainCollisions.length) {
-            const sumVelocity = terrainCollisions.reduce((total, collision) => {
-                return total + collision.velocity[1];
-            }, 0);
-
-            const d = gaussian() * sumVelocity * 0.0016;
-            const a = random() * 2 * pi;
-            const shakeVector = toCartesian([d, a]);
-
-            terrainbox[0] += shakeVector[0];
-            terrainbox[1] += shakeVector[1];
+events('keydown', document)
+.each(overload(toKey, {
+    'left': function(e) {
+        if (rocket.fuel.value <= 0) {
+            return;
         }
 
-        render(ctx, viewbox, terrainbox, renders.concat(updates), t0, t1);
-        renderFuel(ctx, [1200, 800, 300, 40], style, rocket);
+        if (rocket.touchdown) {
+            return;
+        }
 
-        // Cue up next frame
-        t0 = time / 1000;
-        requestAnimationFrame(frame);
-    }
+        rocket.rotation.velocity = -0.6;
+        e.preventDefault();
+    },
 
-    frame(t0);
+    'right': function(e) {
+        if (rocket.fuel.value <= 0) {
+            return;
+        }
 
-    events('keydown', document)
-    .each(overload(toKey, {
-        'left': function(e) {
-            if (rocket.fuel.value <= 0) {
-                return;
-            }
+        if (rocket.touchdown) {
+            return;
+        }
 
-            if (rocket.touchdown) {
-                return;
-            }
+        rocket.rotation.velocity = 0.6;
+        e.preventDefault();
+    },
 
-            rocket.rotation.velocity = -0.6;
-            e.preventDefault();
-        },
+    'space': function(e) {
+        if (rocket.fuel.value <= 0) {
+            return;
+        }
 
-        'right': function(e) {
-            if (rocket.fuel.value <= 0) {
-                return;
-            }
+        if (rocket.touchdown) {
+            return;
+        }
 
-            if (rocket.touchdown) {
-                return;
-            }
+        rocket.thrust = 600;
+        rocket.fuel.velocity = -0.06;
+        e.preventDefault();
+    },
 
-            rocket.rotation.velocity = 0.6;
-            e.preventDefault();
-        },
+    default: noop
+}));
 
-        'space': function(e) {
-            if (rocket.fuel.value <= 0) {
-                return;
-            }
+events('keyup', document)
+.each(overload(toKey, {
+    'left': function(e) {
+        rocket.rotation.velocity = 0;
+    },
 
-            if (rocket.touchdown) {
-                return;
-            }
+    'right': function(e) {
+        rocket.rotation.velocity = 0;
+    },
 
-            rocket.thrust = 600;
-            rocket.fuel.velocity = -0.06;
-            e.preventDefault();
-        },
+    'space': function(e) {
+        rocket.position.acceleration[0] = 0;
+        rocket.position.acceleration[1] = gravity;
+        rocket.thrust = 0;
+        rocket.fuel.velocity = 0;
+    },
 
-        default: noop
-    }));
-
-    events('keyup', document)
-    .each(overload(toKey, {
-        'left': function(e) {
-            rocket.rotation.velocity = 0;
-        },
-
-        'right': function(e) {
-            rocket.rotation.velocity = 0;
-        },
-
-        'space': function(e) {
-            rocket.position.acceleration[0] = 0;
-            rocket.position.acceleration[1] = gravity;
-            rocket.thrust = 0;
-            rocket.fuel.velocity = 0;
-        },
-
-        default: noop
-    }));
-}
-
-
-//start();
-
+    default: noop
+}));

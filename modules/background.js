@@ -13,6 +13,25 @@ import { clamp } from '../../fn/module.js';
 // Mars thermosphere 100-200km (500000-1000000px)
 // Driven by UV heating, can get 400K hot
 
+export function render(ctx, viewbox, style, object, time) {
+    //ctx.save();
+    ctx.beginPath();
+    ctx.rect.apply(ctx, viewbox);
+    ctx.closePath();
+
+    ctx.fillStyle = style.getPropertyValue('--sky-fill-top');
+    ctx.fill();
+
+    const ratio = 1 - clamp(0, 1, viewbox[1] / -50000);
+    ctx.fillStyle = style.getPropertyValue('--sky-fill-bottom') + ('0' + Math.floor(ratio * 254).toString(16)).slice(-2);
+    ctx.fill();
+    //ctx.restore();
+}
+
+
+
+/* OLD */
+
 export function renderBackground(ctx, viewbox, style, time, vapour) {
     //ctx.save();
     ctx.beginPath();
