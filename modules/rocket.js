@@ -1,6 +1,6 @@
 
 import { toCartesian, wrap } from '../../fn/module.js';
-import { drawPath } from './canvas.js';
+import { drawPath } from '../../colin/modules/canvas.js';
 import { updateValue } from './physics.js';
 
 

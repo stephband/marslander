@@ -9,7 +9,8 @@ https://www.everygamegoing.com/landingMachineType/index/machine_folder/electron/
 
 
 import { overload, noop, toCartesian, toPolar } from '../fn/module.js';
-import { events, toKey } from '../dom/module.js';
+import events from '../dom/modules/events.js';
+import toKey from '../dom/modules/to-key.js';
 
 import { detectLinePoint } from '../colin/modules/collision.js';
 import { Renderer } from '../colin/modules/renderer.js';

@@ -1,7 +1,7 @@
 
 import { clamp, remove } from '../../fn/module.js';
 import { updateValue } from './physics.js';
-import { drawCircle } from './canvas.js';
+import { drawCircle } from '../../colin/modules/canvas.js';
 
 export function from() {
     return {

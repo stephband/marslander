@@ -2,7 +2,7 @@
 /* Terrain */
 
 import { gaussian, last } from '../../fn/module.js';
-import { drawPath } from './canvas.js';
+import { drawPath } from '../../colin/modules/canvas.js';
 
 export function from() {
     return {
