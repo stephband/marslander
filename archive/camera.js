@@ -1,5 +1,6 @@
 
-import { gaussian, toCartesian } from '../../fn/module.js'
+import gaussian    from '../../fn/modules/gaussian.js';
+import toCartesian from '../../fn/modules/to-cartesian.js'
 
 const random = Math.random;
 

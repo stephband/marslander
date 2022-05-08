@@ -1,67 +1,45 @@
 
-import { clamp, remove } from '../../fn/module.js';
-import { updateValue } from './physics.js';
+import clamp  from '../../fn/modules/clamp.js';
+import remove from '../../fn/modules/remove.js';
 import { drawCircle } from '../../colin/modules/canvas.js';
 
-export function from() {
-    return {
-        type: 'vapour',
-        collide: ['vapour'],
-        data: [0, 0]
-    };
+const assign = Object.assign;
+const random = Math.random;
+
+
+/* Vapour */
+
+export default function Vapour(time, x = 0, y = 0, r = 12, vx = 0, vy = 0, vr = 0) {
+    this.created  = time;
+    this.data     = Float64Array.of(x, y, r, vx, vy, vr, 0, 0, 0);
+    this.duration = 1 + random() * 0.8;
+    this.drag     = 0.05;
 }
 
-export function of() {
-    return {
-        type: 'vapour',
-        collide: ['vapour'],
-        data: [0, 0]
-    };
+assign(Vapour.prototype, {
+    type: 'vapour',
+    size: 3,
+
+    update: function update(t1, t2, environment, objects) {
+        if (this.created < t1 - this.duration) {
+            remove(objects, this);
+        }
+    },
+
+    render: function(environment, time) {
+        const { ctx, style } = environment;
+        const decay = clamp(0, 1, (time - this.created) / this.duration);
+
+        ctx.save();
+if (this.data[2] > 0) {
+        drawCircle(ctx, [this.data[0], this.data[1], this.data[2] * (1 + 16 * Math.pow(decay, 2))]);
 }
-
-export function update(terrainbox, vapour, t0, t1, objects, terrain) {
-    updateValue(vapour.position, t1 - t0);
-
-    if (vapour.created < t1 - vapour.duration) {
-        remove(objects, vapour);
+else {
+    // TODO: find out why radius is ending up negative!!
+    //console.log('ooops', this.data[2])   ;
+}
+        ctx.fillStyle = style.getPropertyValue('--vapour-fill') + ('0' + Math.floor(100 - 100 * Math.pow(decay, 0.1)).toString(16)).slice(-2);
+        ctx.fill();
+        ctx.restore();
     }
-}
-
-export function render(ctx, viewbox, style, vapour, t0, t1) {
-    const decay = clamp(0, 1, (t1 - vapour.created) / vapour.duration);
-    ctx.save();
-    ctx.translate(vapour.position.value[0], vapour.position.value[1]);
-    drawCircle(ctx, vapour.data, vapour.data[2] * (1 + 16 * Math.pow(decay, 2)));
-    ctx.fillStyle = style.getPropertyValue('--vapour-fill') + ('0' + Math.floor(160 - 160 * Math.pow(decay, 0.1)).toString(16)).slice(-2);
-    // Waaay slows it down
-    //ctx.filter = "blur(2px)";
-    ctx.fill();
-    ctx.restore();
-}
-
-
-
-
-/* OLD */
-
-export function updateVapour(terrainbox, vapour, t0, t1, objects) {
-    updateValue(vapour.position, t1 - t0);
-
-    if (vapour.created < t1 - vapour.duration) {
-        remove(objects, vapour);
-    }
-}
-
-export function renderVapour(ctx, viewbox, style, vapour, t0, t1) {
-    const decay = clamp(0, 1, (t1 - vapour.created) / vapour.duration);
-    ctx.save();
-    ctx.translate(vapour.position.value[0], vapour.position.value[1]);
-    drawCircle(ctx, vapour.data, vapour.data[2] * (1 + 16 * Math.pow(decay, 2)));
-    ctx.fillStyle = style.getPropertyValue('--vapour-fill') + ('0' + Math.floor(160 - 160 * Math.pow(decay, 0.1)).toString(16)).slice(-2);
-    // Waaay slows it down
-    //ctx.filter = "blur(2px)";
-    ctx.fill();
-    ctx.restore();
-}
-
-/* --- */
+});

@@ -1,7 +1,8 @@
 
-import { clamp, remove } from '../../fn/module.js';
+import clamp           from '../../fn/modules/clamp.js';
+import remove          from '../../fn/modules/remove.js';
 import { updateValue } from './physics.js';
-import { drawPath } from '../../colin/modules/canvas.js';
+import { drawPath }    from '../../colin/modules/canvas.js';
 
 export function updateMeteor(terrainbox, meteor, t0, t1, objects, collisions) {
     const p0 = copy(meteor.position.value);

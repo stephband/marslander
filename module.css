@@ -1,0 +1,39 @@
+
+.marslander-canvas {
+    --rocket-fill:    #2b3134;
+    --vapour-fill:    #C86201;
+    --terrain-fill-0: #836FCD;
+    --terrain-fill-1: #1d4f6a;
+    --explosion-fill: #FE6800;
+
+    background: black;
+    background-image: linear-gradient(to bottom, #924C00, #FED701);
+}
+
+
+.marslander-message,
+.marslander-stats {
+    grid-row: 1;
+    margin-top: 0;
+    opacity: 0;
+    visibility: hidden;
+    color: #113446;
+    z-index: 10;
+    transition:
+        opacity 0.5s linear,
+        visibility 0.5s linear;
+}
+
+.marslander-message {
+    grid-row: 1;
+}
+
+.marslander-stats {
+    grid-row: 2;
+}
+
+.marslander-message.visible,
+.marslander-stats.visible {
+    opacity: 1;
+    visibility: visible;
+}

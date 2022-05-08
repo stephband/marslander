@@ -1,5 +1,5 @@
 
-const messageNode = document.getElementById('game-message');
+const messageNode = document.getElementById('marslander-message');
 
 export function message(text, vel, gradient, rotation, fuel) {
     messageNode.innerHTML = text;
@@ -11,7 +11,7 @@ export function message(text, vel, gradient, rotation, fuel) {
     stats(vel, gradient, rotation, fuel);
 }
 
-const statsNode = document.getElementById('game-stats');
+const statsNode = document.getElementById('marslander-stats');
 
 export function stats(vel, gradient, rotation, fuel) {
     statsNode.innerHTML =

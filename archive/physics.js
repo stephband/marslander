@@ -1,5 +1,6 @@
 
-import { id, overload } from '../../fn/module.js';
+import id       from '../../fn/modules/id.js';
+import overload from '../../fn/modules/overload.js';
 
 export const updateValue = overload((data) => typeof data.value, {
     'number': function(data, duration, fn = id) {

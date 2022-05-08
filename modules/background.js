@@ -1,5 +1,5 @@
 
-import { clamp } from '../../fn/module.js';
+import clamp from '../../fn/modules/clamp.js';
 
 // Mars planetary boundary layer 0-10km (0-50000px)
 // Convection layer heated by planet and dust absorption
