@@ -105,7 +105,7 @@ assign(Rocket, {
 assign(Rocket.prototype, {
     type: 'rocket',
     size: 3,
-    collide: ['rocket'],
+    collidable: ['rocket'],
 
     update: function(t1, t2, environment, objects) {
         const data = this.data;

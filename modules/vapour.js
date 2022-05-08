@@ -18,6 +18,7 @@ export default function Vapour(time, x = 0, y = 0, r = 12, vx = 0, vy = 0, vr = 
 
 assign(Vapour.prototype, {
     type: 'vapour',
+    collidable: ['vapour'],
     size: 3,
 
     update: function update(t1, t2, environment, objects) {

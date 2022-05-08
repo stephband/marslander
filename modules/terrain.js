@@ -31,7 +31,7 @@ assign(Terrain, {
 assign(Terrain.prototype, {
     type: 'terrain',
     size: 2,
-    collide: ['rocket', 'vapour', 'clouds'],
+    collidable: ['rocket', 'vapour', 'clouds'],
 
     resize: function(environment) {
         const { ctx, viewbox, style } = environment;

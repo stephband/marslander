@@ -32,7 +32,7 @@ assign(Explosion, {
 assign(Explosion.prototype, {
     type:    'explosion',
     size:    2,
-    collide: ['rocket'],
+    collidable: ['rocket'],
 
     update: function(t1, t2, environment, objects) {
         if (this.created < t2 - this.duration) {
